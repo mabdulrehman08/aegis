@@ -80,6 +80,7 @@ class TrackReport:
     confidence: float
     capture_t: float
     zone_id: str | None = None
+    signs: dict | None = None        # cv.signs snapshot; visible reports only
 
 
 class TrackManager:

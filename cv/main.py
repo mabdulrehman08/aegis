@@ -7,9 +7,11 @@ camera observations to the backend at ``publisher.rate_hz``.
     python -m cv.main --config cv/config/phone.yaml    # phone, predefined zones
     python -m cv.main --mock-backend                   # print JSON instead of sending
     python -m cv.main --source clip.mp4 --loop         # replay a recording
+    python -m cv.main --signs                          # also observe signs (press c = command given)
 
-Reports detections, tracking state and floor positions only. It never infers
-injuries, severity or triage.
+Reports detections, tracking state, floor positions and, with ``--signs``,
+observed signs with confidence (cv/signs/). It never outputs a diagnosis,
+injury type, severity or priority.
 """
 
 from __future__ import annotations
@@ -53,6 +55,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-display", action="store_true", help="no debug window")
     parser.add_argument("--duration", type=float, default=0.0, help="stop after N seconds (0 = run)")
     parser.add_argument("--summary-json", help="also write the measured run summary to this file")
+    parser.add_argument("--signs", action="store_true", help="observe signs (config: signs.enabled)")
+    parser.add_argument("--send-signs", action="store_true",
+                        help="include signs in reports (needs the backend change in CONTRACT_PROPOSAL.md)")
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
 
@@ -67,7 +72,12 @@ def apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
         publisher = replace(publisher, base_url=args.backend_url)
     if args.camera_id:
         publisher = replace(publisher, camera_id=args.camera_id)
-    return replace(settings, publisher=publisher)
+    signs = settings.signs
+    if getattr(args, "signs", False) or getattr(args, "send_signs", False):
+        signs = replace(signs, enabled=True)
+    if getattr(args, "send_signs", False):
+        publisher = replace(publisher, send_signs=True)
+    return replace(settings, publisher=publisher, signs=signs)
 
 
 def load_calibration(path: Path) -> Calibration | None:
@@ -133,6 +143,13 @@ def run(args: argparse.Namespace) -> int:
     camera = Camera(settings.camera, args.source, pace=not args.no_pace, clock=timebase.now,
                     fps_override=(sidecar or {}).get("fps"), loop=args.loop)
     tracker = TrackManager(settings.tracking, session)
+    signs = None
+    if settings.signs.enabled:
+        from cv.signs import SignsEstimator
+
+        signs = SignsEstimator(settings.signs, timebase.iso, settings.tracking.keypoint_min_conf)
+        log.info("Observing signs%s; press c in the window right after giving a spoken command",
+                 " and sending them" if settings.publisher.send_signs else " (shown only, not sent)")
 
     publisher = None
     if base_calibration is not None or zone_map is not None:
@@ -202,6 +219,8 @@ def run(args: argparse.Namespace) -> int:
                         mapping_ready = calibration is not None
                 detections, inference_s = detector(frame.image)
                 tracks = tracker.update(detections, frame.t)
+                if signs is not None:
+                    signs.update(frame.image, tracks, frame.t)
                 frames += 1
                 inference_ms.append(inference_s * 1000.0)
                 if last_frame_t is not None:
@@ -215,13 +234,23 @@ def run(args: argparse.Namespace) -> int:
 
             now = timebase.now()
             if publisher is not None and mapping_ready and now >= next_publish:
-                publisher.submit(tracker.reports(now), now)
+                reports = tracker.reports(now)
+                if signs is not None:
+                    reports = [replace(r, signs=signs.snapshot(tracker.tracks[r.track_id], now))
+                               if r.state == "visible" and r.track_id in tracker.tracks else r
+                               for r in reports]
+                publisher.submit(reports, now)
                 next_publish = max(next_publish + publish_period, now - publish_period)
 
             if not args.no_display and frame is not None:
-                if not show(frame.image, tracks, tracker, calibration, zone_map, camera, publisher,
-                            fps, detector, settings, args, mapping_error):
+                key = show(frame.image, tracks, tracker, calibration, zone_map, camera, publisher,
+                           fps, detector, settings, args, mapping_error, signs, now)
+                if key in (ord("q"), 27):
                     break
+                if key == ord("c") and signs is not None:
+                    signs.mark_command(now)
+                    log.info("Command marked: watching for responses for %.0f s",
+                             settings.signs.command_window_s)
     finally:
         camera.release()
         if publisher is not None:
@@ -243,7 +272,8 @@ def run(args: argparse.Namespace) -> int:
 
 
 def show(image, tracks, tracker, calibration, zone_map, camera, publisher, fps, detector,
-         settings, args, mapping_error) -> bool:
+         settings, args, mapping_error, signs=None, now: float = 0.0) -> int:
+    """Draw the debug window; returns the key pressed (or 255)."""
     import cv2
 
     from cv.overlay import draw_calibration, draw_hud, draw_minimap, draw_tracks, draw_zones
@@ -251,7 +281,13 @@ def show(image, tracks, tracker, calibration, zone_map, camera, publisher, fps, 
     canvas = image.copy()
     draw_calibration(canvas, calibration)
     draw_zones(canvas, zone_map)
-    draw_tracks(canvas, tracks, settings.tracking.keypoint_min_conf)
+    extra = {}
+    if signs is not None:
+        from cv.signs import describe
+
+        extra = {t.track_id: describe(signs.snapshot(t, now), signs.listening(t.track_id))
+                 for t in tracks if t.track_id in signs.states}
+    draw_tracks(canvas, tracks, settings.tracking.keypoint_min_conf, extra)
     draw_minimap(canvas, tracks, calibration)
     pub = publisher.status() if publisher else None
     mapping = "zones" if zone_map is not None else "calibrated"
@@ -272,9 +308,12 @@ def show(image, tracks, tracker, calibration, zone_map, camera, publisher, fps, 
         warnings.append(mapping_error or "UNCALIBRATED - not publishing")
     if camera.is_file:
         warnings.append("REPLAY (recorded clip)" + (f" loop {camera.loops}" if args.loop else ""))
+    if signs is not None:
+        hud.append("signs: observations, not a diagnosis | c = command given"
+                   + (" | SENDING" if settings.publisher.send_signs else " | not sent"))
     draw_hud(canvas, hud, warnings)
     cv2.imshow(WINDOW, canvas)
-    return cv2.waitKey(1) & 0xFF not in (ord("q"), 27)
+    return cv2.waitKey(1) & 0xFF
 
 
 def _percentile(values: list[float], q: float) -> float | None:

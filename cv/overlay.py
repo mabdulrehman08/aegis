@@ -54,7 +54,9 @@ def draw_zones(image, zone_map: ZoneMap | None) -> None:
               (int(x) + 8, int(y) + 92), 0.5, CYAN)
 
 
-def draw_tracks(image, tracks: Sequence[Track], keypoint_min_conf: float = 0.5) -> None:
+def draw_tracks(image, tracks: Sequence[Track], keypoint_min_conf: float = 0.5,
+                extra_lines: dict[str, list[str]] | None = None) -> None:
+    """Boxes, skeletons and labels; ``extra_lines`` adds per-track text (observed signs)."""
     for track in tracks:
         color = track_color(track)
         x1, y1, x2, y2 = (int(v) for v in track.bbox)
@@ -78,6 +80,7 @@ def draw_tracks(image, tracks: Sequence[Track], keypoint_min_conf: float = 0.5) 
         lines = [
             f"{track.short_id} {track.state}{seen} {track.confidence_smoothed:.2f} {track.posture.label}",
             location,
+            *(extra_lines or {}).get(track.track_id, []),
         ]
         for i, line in enumerate(lines):
             _text(image, line, (x1 + 3, y1 + 16 + 17 * i), 0.45, color)

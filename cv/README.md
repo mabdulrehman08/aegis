@@ -5,10 +5,12 @@ the backend, as defined in `../shared/CONTRACT.md`, `../docs/INTEGRATION.md`
 and `../docs/LIVE_DEMO.md`.
 
 The CV module reports **observations with confidence** only: where a person is
-on the floor, how sure the detector is, and whether the track is currently
-seen. It never outputs injury type, diagnosis, severity or triage. Humans
-associate tracks with casualties and confirm priorities in the dashboard. All
-scenes and casualties are simulated.
+on the floor, how sure the detector is, whether the track is currently seen,
+and (with `--signs`) DARPA-style observed signs: posture, movement, response
+to a command, eyes, breathing motion and visible blood. It never outputs
+injury type, diagnosis, severity, triage or heart rate. The backend may turn
+the signs into a *suggested* priority that a medic confirms or overrides in the
+dashboard (`CONTRACT_PROPOSAL.md`). All scenes and casualties are simulated.
 
 ## Status
 
@@ -18,7 +20,7 @@ scenes and casualties are simulated.
 | 1 | Camera → YOLO → ByteTrack → mapping → publisher | Done; staged-floor calibration needs the tape marks |
 | 1 | Phone as camera 2 (`phone-1`, predefined zones) | Done, verified live together with the Logitech |
 | 3 | Record / replay fallback, evaluation tool | Done; staged scenario runs (lying, sitting, occlusion) still to record |
-| 2 | Posture, stillness, breathing, command response | Not started (posture used internally) |
+| 2 | Observed signs: posture, movement, command response, eyes, breathing, visible blood | Done and unit-tested; live-checked for eyes, movement and blood (no false positive on skin). Sending needs the backend change in `CONTRACT_PROPOSAL.md`; breathing and closed eyes still need a staged lying test |
 
 ## Setup
 
@@ -225,6 +227,42 @@ unseen and not yet lost (0.6 m on the floor; 8 % of the frame diagonal in zones
 mode), the old track ID continues, so casualties don't need re-linking after
 an occlusion. Set `tracking.reattach: false` to disable it.
 
+## Observed signs (`--signs`)
+
+```sh
+python -m cv.main --signs                # compute and show signs; not sent
+python -m cv.main --send-signs           # also send them (backend must accept "signs")
+```
+
+Each sign is an observation with a confidence and an explicit
+`not_testable` / `not_tested`, shown under the track in the window. Wire
+format and backend asks: `CONTRACT_PROPOSAL.md`.
+
+| Sign | How | Needs |
+| --- | --- | --- |
+| movement | Keypoints vs 1 s ago, divided by body size; `still` after 2 s | Pose visible |
+| response | Press **c** in the window right after the spoken command ("raise your hand if you hear me"). `responded` if a limb moves ≥ 0.15 body size within 8 s; `no_response` only if the person was in view for at least half the window | Limbs visible |
+| eyes | MediaPipe Face Landmarker blink scores on a face crop rotated level (works for faces lying sideways). The model downloads into `cv/models/` on first use | Face ≥ 36 px across; at 2–3 m use 1080p capture |
+| breathing | Optical flow on the chest while still; rate only from a clear rhythm, same in both halves of 15 s | Person still ~11 s, chest visible |
+| visible blood | Deep-red pixels (green and blue ≤ 0.35 × red, hue ≤ 10 or ≥ 174) per body region: head, torso, arms, legs | No red, pink or magenta clothing or props: their shadows are blood-colored |
+
+Before the demo, check the actual fake blood under the room light: run
+`--signs`, put blood on one actor, and confirm `blood: <region>` appears and
+clean skin stays `not detected`. Thin smears look paler. If they are missed,
+raise `signs.blood_max_gb_ratio` a little (skin measured ~0.45 in a dim room,
+so stay below 0.42). The fine-tuned model (`method: model`) is the next step
+once we have labelled footage of our own blood.
+
+Measured at a desk (one person, Logitech 720p): signs add 0.1–0.5 ms median
+per frame, 12–16 ms p95 when the eye model runs; pipeline at 24–26 FPS. Eyes
+`open` with confidence 0.74–0.95. The first blood detector flagged warm-lit
+skin as blood; the green/blue ratio fixed it. On the ultralytics `bus.jpg`
+sample the shadowed folds of a magenta shirt (BGR 20, 10, 103) still read as
+torso blood: color alone cannot tell them apart, which is why actors must
+avoid red and pink, and why the fine-tuned model is worth doing. A seated person working at a
+desk moves the chest 5–15 px irregularly, so breathing stays `not_testable`;
+that is intended.
+
 ## 3. Record / replay fallback
 
 Record each staged scenario once the camera is mounted and calibrated. If the
@@ -314,7 +352,7 @@ are not accuracy figures. Mapping error comes from the staged scenario runs.
 python -m pytest cv/tests
 ```
 
-89 tests. The suite covers:
+120 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.
@@ -328,6 +366,10 @@ python -m pytest cv/tests
 - Camera reconnect and file looping.
 - The staged-area map check against the backend's demo map.
 - Evaluation: matching, ID switches, false positives, error and bias.
+- Signs on synthetic data: stillness vs jitter, one-hand command response,
+  no_response only when watched, blood on the torso vs skin and pink cloth,
+  breathing rate under noise and no false rate from 300 noise-only windows,
+  level face crops for sideways faces, signs sent only on visible reports.
 - Contract tests that validate every payload against `backend/app/models.py` and
   `backend/app/simulation/models.py`, and drive the in-process backend through
   full calibrated and zone lifecycles (skipped without `requirements-dev.txt`).

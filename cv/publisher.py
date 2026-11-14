@@ -14,6 +14,9 @@ Behaviour:
   sends. Under backpressure older reports are replaced, never queued forever,
   so an old observation is never sent after a newer one (the backend rejects that).
 - Unchanged tracks are re-sent every ``heartbeat_s``; changes go out on the next tick.
+- ``send_signs`` adds the ``signs`` object (cv/CONTRACT_PROPOSAL.md) to visible
+  reports; a change of a sign's value counts as a change. Off by default: the
+  current backend rejects unknown fields.
 - Occluded/lost reports repeat the position, confidence and ``last_seen_at`` of
   the last report the backend *accepted* for that track, as the contract
   requires. Tracks the backend never accepted get no occluded/lost report.
@@ -169,7 +172,7 @@ class Publisher:
         with self._lock:
             for report in reports:
                 key = (report.state, report.x_m, report.y_m, report.zone_id,
-                       report.confidence >= MIN_CONFIDENCE_BUCKET)
+                       report.confidence >= MIN_CONFIDENCE_BUCKET, self._signs_key(report))
                 previous = self._last_submitted.get(report.track_id)
                 due = (previous is None or previous[0] != key or report.state == "lost"
                        or now - previous[1] >= self.settings.heartbeat_s)
@@ -186,6 +189,13 @@ class Publisher:
         if queued:
             self._wake.set()
         return queued
+
+    def _signs_key(self, report: TrackReport) -> tuple:
+        """Sign values (not confidences or timers): a change goes out on the next tick."""
+        if not self.settings.send_signs or not report.signs:
+            return ()
+        return tuple(sorted((name, sign.get("value")) for name, sign in report.signs.items()
+                            if isinstance(sign, dict)))
 
     # ------------------------------------------------------------- payloads
     def build_body(self, outgoing: _Outgoing) -> dict | None:
@@ -216,6 +226,8 @@ class Publisher:
         }
         common = {"id": observation_id, "observed_at": timebase.iso(report.observed_t),
                   "confidence": source.confidence, "track": track, **location}
+        if self.settings.send_signs and report.state == "visible" and report.signs:
+            common["signs"] = report.signs
         if self.settings.endpoint == "camera":
             return {"mode": "simulation", **common}
         return {"source": "cv", "kind": "person_detected", **common}

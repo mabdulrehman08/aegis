@@ -60,6 +60,39 @@ class TrackingSettings:
 
 
 @dataclass(frozen=True)
+class SignsSettings:
+    """Observed signs (cv/signs/). Observations with confidence, never a diagnosis."""
+
+    enabled: bool = False               # compute and show signs (sending: publisher.send_signs)
+    window_s: float = 10.0              # smoothing window reported as signs.window_s
+    motion_lag_s: float = 1.0           # keypoints compared with this long ago
+    move_threshold: float = 0.06        # displacement / body size that counts as movement
+    still_after_s: float = 2.0          # no movement for this long = still
+    command_window_s: float = 8.0       # time to respond after a marked command
+    response_threshold: float = 0.15    # limb displacement / body size that counts as a response
+    eyes: bool = True
+    eyes_model: str = "face_landmarker.task"
+    eyes_hz: float = 3.0
+    eyes_window_s: float = 3.0
+    eyes_closed_threshold: float = 0.5
+    eyes_min_face_px: int = 36
+    blood: bool = True
+    blood_hz: float = 3.0
+    blood_min_fraction: float = 0.04    # red share of a body region to call it detected
+    blood_min_pixels: int = 60
+    blood_hue_max: int = 10             # red hue (OpenCV 0..180): <= this (orange side) ...
+    blood_hue_min_wrap: int = 174       # ... or >= this (magenta side; pink is ~160-172)
+    blood_max_gb_ratio: float = 0.35    # green and blue <= this x red; skin is ~0.45
+    blood_val_min: int = 40             # minimum red channel (0..255)
+    breathing: bool = True
+    breathing_window_s: float = 15.0
+    breathing_min_bpm: float = 6.0
+    breathing_max_bpm: float = 40.0
+    breathing_min_snr: float = 40.0     # velocity-spectrum peak over the rest of the band
+    breathing_min_amplitude_px: float = 0.3
+
+
+@dataclass(frozen=True)
 class PublisherSettings:
     base_url: str = "http://127.0.0.1:8000"
     scenario_id: str = "demo"
@@ -71,6 +104,7 @@ class PublisherSettings:
     timeout_s: float = 1.5
     max_backoff_s: float = 5.0
     mock_log: str = "artifacts/mock_{camera_id}.jsonl"
+    send_signs: bool = False            # needs the backend change in cv/CONTRACT_PROPOSAL.md
 
 
 @dataclass(frozen=True)
@@ -79,6 +113,7 @@ class Settings:
     detector: DetectorSettings = field(default_factory=DetectorSettings)
     mapping: MappingSettings = field(default_factory=MappingSettings)
     tracking: TrackingSettings = field(default_factory=TrackingSettings)
+    signs: SignsSettings = field(default_factory=SignsSettings)
     publisher: PublisherSettings = field(default_factory=PublisherSettings)
 
 

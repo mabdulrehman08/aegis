@@ -36,6 +36,32 @@ tracking:
   reattach_radius_frac: 0.08  # zones mode: same, as a fraction of the frame diagonal
   zone_switch_frames: 5       # zones mode: frames in a new zone before switching
 
+# Observed signs (cv/signs/): observations with confidence and not_testable,
+# never a diagnosis, severity or priority. --signs turns them on for one run.
+signs:
+  enabled: false
+  window_s: 10.0
+  motion_lag_s: 1.0           # keypoints compared with this long ago
+  move_threshold: 0.06        # 75th-percentile keypoint shift / body scale = "moving"
+  still_after_s: 2.0
+  command_window_s: 8.0       # after pressing c: time allowed for a response
+  response_threshold: 0.15    # limb shift / body scale vs pose at the command
+  eyes: true                  # MediaPipe Face Landmarker blink scores (model auto-downloads)
+  eyes_hz: 3.0
+  eyes_window_s: 3.0
+  eyes_closed_threshold: 0.5
+  eyes_min_face_px: 36        # smaller faces are not_testable; use 1080p for eyes at range
+  blood: true                 # saturated red inside body regions (color detector)
+  blood_hz: 3.0
+  blood_min_fraction: 0.04
+  blood_min_pixels: 60
+  blood_max_gb_ratio: 0.35    # green/blue <= this x red. Skin ~0.45; raise for thin smears, check skin stays clean
+  breathing: true             # torso optical flow while still, FFT rate
+  breathing_window_s: 15.0
+  breathing_min_bpm: 6.0
+  breathing_max_bpm: 40.0
+  breathing_min_snr: 40.0     # higher = fewer false "breathing" calls, more not_testable
+
 publisher:
   base_url: http://127.0.0.1:8000
   scenario_id: demo
@@ -47,3 +73,4 @@ publisher:
   timeout_s: 1.5
   max_backoff_s: 5.0
   mock_log: artifacts/mock_{camera_id}.jsonl   # relative to cv/
+  send_signs: false         # true only once the backend accepts "signs" (cv/CONTRACT_PROPOSAL.md)
