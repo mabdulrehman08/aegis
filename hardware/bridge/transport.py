@@ -15,6 +15,10 @@ class TransportError(OSError):
     pass
 
 
+class NoDeviceYet(TransportError):
+    """Normal while waiting for the device to join; not worth a warning each time."""
+
+
 class Transport(Protocol):
     def write_line(self, line: str) -> None: ...
     def read_lines(self) -> list[str]: ...
@@ -154,7 +158,7 @@ class TcpDeviceServer:
                 newest.close()
             newest = TcpTransport(conn, f"{ip}:{port}")
         if newest is None:
-            raise TransportError("waiting for the responder device to join over WiFi")
+            raise NoDeviceYet("waiting for the responder device to join over WiFi")
         return newest
 
     def close(self) -> None:

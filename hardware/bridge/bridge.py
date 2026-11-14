@@ -12,7 +12,7 @@ from typing import Any, Callable
 
 from .events import REPORT_TO_KIND, utc_now
 from .protocol import format_assign, format_cancel, format_ok, parse_device_line
-from .transport import Transport, TransportError
+from .transport import NoDeviceYet, Transport, TransportError
 
 log = logging.getLogger("aegis.hardware")
 
@@ -69,6 +69,7 @@ class Bridge:
         self.stats = BridgeStats()
         self._last_rx = 0.0
         self._last_ping = 0.0
+        self._waiting_logged = False
 
     # ------------------------------------------------------------ connection
 
@@ -92,6 +93,12 @@ class Bridge:
                         self.link = fields.get("link")
                 if not self.device_id:
                     time.sleep(0.02)
+        except NoDeviceYet as exc:
+            if not self._waiting_logged:
+                log.info("%s", exc)
+                self._waiting_logged = True
+            self._drop_transport()
+            return False
         except TransportError as exc:
             log.warning("connect failed: %s", exc)
             self._drop_transport()
@@ -101,6 +108,7 @@ class Bridge:
             self._drop_transport()
             return False
         log.info("connected to %s (fw %s, link %s)", self.device_id, self.firmware, self.link)
+        self._waiting_logged = False  # log the next wait (e.g. out of range) once again
         self._last_rx = self._last_ping = self.clock()
         if self.active and not self.active.finished:
             # Re-show an unfinished assignment after a reconnect or device reboot.
