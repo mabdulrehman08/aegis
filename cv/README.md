@@ -1,28 +1,29 @@
 # CV and mapping (AskAr)
 
-Webcam → YOLO pose → ByteTrack IDs → floor homography → `CVObservation` JSON
-for the backend, as defined in `../shared/CONTRACT.md` and
-`../docs/INTEGRATION.md`.
+Webcam → YOLO pose → ByteTrack IDs → floor mapping → camera observations for
+the backend, as defined in `../shared/CONTRACT.md`, `../docs/INTEGRATION.md`
+and `../docs/LIVE_DEMO.md`.
 
-The CV module reports **observations with confidence** only: where a person is on
-the floor, how sure the detector is, and whether the track is currently seen.
-It never outputs injury type, diagnosis, severity or triage. Humans associate
-tracks with casualties and confirm priorities in the dashboard. All scenes and
-casualties are simulated.
+The CV module reports **observations with confidence** only: where a person is
+on the floor, how sure the detector is, and whether the track is currently
+seen. It never outputs injury type, diagnosis, severity or triage. Humans
+associate tracks with casualties and confirm priorities in the dashboard. All
+scenes and casualties are simulated.
 
 ## Status
 
 | Phase | Scope | State |
 | --- | --- | --- |
 | 0 | Detection test harness | Done |
-| 1 | Camera → YOLO → ByteTrack → homography → publisher | Done (needs a real-scene calibration) |
-| 3 | Evaluation scripts, record / replay | Not started (file replay already works) |
+| 1 | Camera → YOLO → ByteTrack → mapping → publisher | Done; staged-floor calibration needs the tape marks |
+| 1 | Phone as camera 2 (`phone-1`, predefined zones) | Done, verified live together with the Logitech |
+| 3 | Record / replay fallback, evaluation tool | Done; staged scenario runs (lying, sitting, occlusion) still to record |
 | 2 | Posture, stillness, breathing, command response | Not started (posture used internally) |
 
 ## Setup
 
-The CV module has its own environment so the backend's `pyproject.toml` / `uv.lock`
-stay untouched. Run everything from the **repository root**.
+The CV module has its own environment so the backend's `pyproject.toml` /
+`uv.lock` stay untouched. Run everything from the **repository root**.
 
 ```sh
 uv venv --python 3.11 cv/.venv
@@ -42,100 +43,138 @@ The app that launches Python needs camera access: **System Settings → Privacy 
 Security → Camera**, enable Terminal / iTerm / Cursor, then restart that app.
 The first run triggers the prompt and fails; run again after allowing.
 
-Camera indices follow AVFoundation's order and can change when devices are
-plugged in. Check with:
+Camera indices follow AVFoundation's order and **change when devices connect**
+(the iPhone moved from 3 to 2 during testing). Check before each session:
 
 ```sh
 ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | grep "\]"
 ```
 
-On the dev MacBook the Logitech C922 is index 0 (1080p at 30 FPS); the
-FaceTime camera and the iPhone Continuity cameras come after it.
+On the dev MacBook: 0 = Logitech C922, 1 = FaceTime, 2 = iPhone (Continuity
+Camera), 3 = iPhone Desk View. Pass `--camera N` when it differs.
 
-## 1. Calibrate the floor
+## 1. Calibrate the staged floor into the demo map
 
-Mount the camera, then mark 4–6 points on the floor with tape and measure their
-positions in meters. Coordinates are in the shared scene frame
-(`demo-floor-1`, +x right/east, +y up/north, origin at the lower-left).
+We keep the backend's 24 × 20 m demo map (frame `demo-floor-1`, wall at
+x = 8..9, y = 2..13, responders at (0, 0) and (20, 0)) and place the staged
+floor inside it with a fixed offset. Recommended placement for a floor up to
+4 × 4 m: **`--offset 12 6`**, covering x 12–16, y 6–10. That area is walkable
+(checked against the backend's occupancy grid) and contains `casualty-actor-a`
+at (14, 8) from `docs/LIVE_DEMO.md`.
+
+1. Mount the Logitech high (2 m or more), angled down at the staged floor.
+2. Tape 5–6 marks on the floor. Measure each from the staged area's front-left
+   corner, in meters: +x to the right, +y away from the camera.
+3. Start the backend and reset the demo scenario (step 2 below), so the
+   calibration can be checked against its map.
+4. Run:
 
 ```sh
-python -m cv.tools.calibrate --camera 0
+python -m cv.tools.calibrate --camera 0 --offset 12 6
 ```
 
-1. SPACE freezes the live frame.
-2. Click each tape mark (right-click or Backspace undoes, `r` resets), then Enter.
-3. Type each point's `x y` in meters in the terminal.
-4. Read the reprojection error table and check the blue 0.5 m grid lies on
-   the floor, then answer `y` to save `cv/config/homography.json`.
+5. SPACE freezes the live frame. Click each tape mark (right-click or Backspace
+   undoes, `r` resets), then press Enter.
+6. Type each point's local `x y` in meters; the offset is added for you.
+7. Read the per-point error table and the map check:
+   - `OK: staged area x 12.00..16.00 m, y 6.00..10.00 m ... is walkable`, or
+   - `NOT WALKABLE` with the blocked cells, out-of-map samples or obstacles.
+     With `--yes` such an area is never saved. Fix the offset or the points.
+8. Check that the blue 0.5 m grid lies on the floor, then answer `y` to save
+   `cv/config/homography.json`.
 
 With exactly 4 points the fit is exact, so the error is 0 by construction. Use
-5–6 points for a real accuracy figure.
-
-`--offset X Y` adds a constant to every entered point. For example, if the staged
-area's corner stands for (10, 4) on the 24 × 20 m demo map, measure locally and
-pass `--offset 10 4`. Re-calibrate after moving the camera or changing its
-resolution. The same aspect ratio at another resolution is rescaled
-automatically.
-
-Non-interactive form (scripts, a still image):
-`--image frame.png --points "u,v;..." --world "x,y;..." --yes`.
+5–6 points for a real accuracy figure. Re-calibrate after moving the camera or
+changing its resolution; the same aspect ratio at another resolution is
+rescaled automatically. `--no-map-check` skips the map check (no backend).
+Non-interactive form: `--image frame.png --points "u,v;..." --world "x,y;..." --yes`.
 
 ## 2. Run the pipeline
 
 ```sh
-python -m cv.main --mock-backend           # print the JSON, no backend needed
-python -m cv.main                          # publish to http://127.0.0.1:8000
-python -m cv.main --source clip.mp4        # replay a recorded clip (labelled REPLAY)
+uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8000      # Prince's backend
+uv run python -m scripts.live_demo --base-url http://127.0.0.1:8000 --prepare-only
+
+python -m cv.main                                  # Logitech (logitech-1, calibrated)
+python -m cv.main --config cv/config/phone.yaml    # phone (phone-1, zones), second terminal
+python -m cv.main --mock-backend                   # print the JSON, no backend needed
 ```
 
 | Flag | Meaning |
 | --- | --- |
 | `--camera N` | Camera index (config: `camera.index`) |
-| `--source FILE` | Replay a video, paced to its FPS (`--no-pace` = as fast as possible) |
-| `--mock-backend` | Log requests to stdout and `cv/artifacts/mock_observations.jsonl` instead of sending them (`--quiet-mock`: file only) |
-| `--backend-url URL` | Backend base URL |
-| `--homography FILE`, `--model NAME`, `--config FILE` | Overrides |
+| `--camera-id ID` | Backend camera ID (config: `publisher.camera_id`) |
+| `--source FILE` | Replay a recording, paced to its measured FPS; `--loop` restarts it, `--no-pace` runs flat out |
+| `--mock-backend` | Log requests to stdout and `cv/artifacts/mock_<camera>.jsonl` instead of sending (`--quiet-mock`: file only) |
+| `--summary-json FILE` | Also write the measured run summary as JSON |
+| `--backend-url URL`, `--homography FILE`, `--model NAME`, `--config FILE` | Overrides |
 | `--no-display`, `--duration S`, `-v` | Headless, stop after S seconds, debug logs |
 
-Without a calibration the pipeline still detects and tracks, but publishes
-nothing and shows `UNCALIBRATED`. Tunables live in `config/pipeline.yaml` and
-`config/bytetrack.yaml`; unknown keys are rejected.
+Without a calibration the Logitech pipeline still detects and tracks, but
+publishes nothing and shows `UNCALIBRATED`. Tunables live in
+`config/pipeline.yaml`, `config/phone.yaml` and `config/bytetrack.yaml`;
+unknown keys are rejected.
 
-**Debug window:** boxes and skeletons, track ID, published state, whether the
-person was seen this frame, confidence, posture, floor coordinates (m), the
-ground point (cyan dot), calibration marks, a top-down mini-map, FPS and
-publisher counters. Green means seen this frame, orange occluded, red stale.
-Press `q` or Esc to quit. The run summary prints FPS, inference time, track
-counts, accepted / rejected reports and capture-to-sent latency.
+**Debug window:**
 
-### Live demo with the backend
+- Boxes and skeletons, with the track ID, state, whether the person was seen
+  this frame, confidence and posture.
+- Floor coordinates in meters, or `zone <id> (estimate)` for the phone.
+- The ground point (cyan dot), calibration marks or zone outlines, and a
+  top-down mini-map.
+- A HUD with FPS, camera ID and mapping, publisher counters and warnings such
+  as `UNCALIBRATED` and `REPLAY`.
 
-```sh
-uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8000      # Prince's backend
-curl -X POST http://127.0.0.1:8000/api/v1/simulations/demo/reset \
-     -H 'Content-Type: application/json' -d '{"mode":"simulation"}'
-python -m cv.main
-```
+Green means seen this frame, orange occluded, red stale. Press `q` or Esc to
+quit. The run summary prints FPS, inference time, track counts, accepted and
+rejected reports and capture-to-sent latency.
 
-The pipeline registers camera `logitech-1` (`calibrated_world`; the
-`calibration_ref` comes from `homography.json`) and starts posting. The operator
-then links each track to a casualty with `POST /associations`, using the
-canonical `track_id` from `GET /state`
-(`sim-camera:10:logitech-1:<session>-t<n>`). The CV module never associates
-tracks or creates casualties.
+Each camera registers itself and starts posting. The operator then links each
+track to a casualty with `POST /associations`, using the canonical `track_id`
+from `GET /state`: `sim-camera:10:logitech-1:<session>-t<n>` or
+`sim-camera:7:phone-1:<session>-t<n>`. The two cameras never share IDs, and
+there is no cross-camera matching. The CV module never associates tracks or
+creates casualties.
+
+### Phone as camera 2
+
+The phone (iPhone Continuity Camera) has no floor calibration, so
+`config/phone.yaml` uses **predefined zones**:
+
+- **Zone polygons:** each zone is a polygon in normalized image coordinates
+  (0..1) plus a reference point on the map.
+- **What is reported:** a person whose ground point falls in a polygon is
+  reported as that `zone_id`.
+- **What the backend does:** it places the person at the zone's reference
+  point and labels it `zone_estimate`, so no precise coordinate is claimed.
+- **Zone changes:** the reported zone only changes after 5 consecutive frames
+  in the new zone (`tracking.zone_switch_frames`), so a person on a border
+  doesn't flicker between zones.
+
+The default is the whole frame as `zone-b` at (3, 2), identical to Prince's
+`--prepare-only` registration, so the two never conflict. To split the view,
+add zones with `image_polygon` (see the comments in `phone.yaml`). The backend
+fixes a camera's mapping until the scenario is reset, so change zones only
+before a reset. If the phone gets a real floor calibration, set
+`mapping.mode: calibrated` and a `homography` file in its config instead.
 
 ## What is published
 
-`POST /api/v1/simulations/demo/cameras/logitech-1/observations` (the default;
-`publisher.endpoint: legacy` posts a plain `CVObservation` to `/observations`):
+`POST /api/v1/simulations/demo/cameras/<camera_id>/observations`:
 
 ```json
 {"mode": "simulation", "id": "s20261114T051005-o000001",
  "observed_at": "2026-11-14T05:10:08.377Z", "confidence": 0.89,
  "track": {"track_id": "s20261114T051005-t1", "state": "visible",
            "first_seen_at": "2026-11-14T05:10:06.362Z", "last_seen_at": "2026-11-14T05:10:06.362Z"},
- "position": {"frame_id": "demo-floor-1", "x_m": 10.23, "y_m": 5.44}}
+ "position": {"frame_id": "demo-floor-1", "x_m": 14.23, "y_m": 8.44}}
 ```
+
+The phone sends `"zone_id": "zone-b"` instead of `position`. Registration is
+`calibrated_world` with the `calibration_ref` from `homography.json`
+(Logitech), or `predefined_zones` with the zone map (phone).
+`publisher.endpoint: legacy` posts a plain `CVObservation` to `/observations`
+(calibrated cameras only).
 
 - **IDs:** track IDs are `<session>-t<n>`. The session is the process start
   time (UTC), so IDs are never reused within or across runs. Observation IDs are
@@ -146,9 +185,10 @@ tracks or creates casualties.
   - `occluded`: not detected since, but the track is alive.
   - `lost`: not detected for 30 s (`lost_after_s`). Sent once, then the ID is
     retired.
-- **Repeated values:** occluded and lost reports repeat the position,
-  confidence and `last_seen_at` of the last report the backend accepted, as
-  the contract requires. `last_seen_at` never advances while unseen.
+- **Repeated values:** occluded and lost reports repeat the position (or
+  zone), confidence and `last_seen_at` of the last report the backend
+  accepted, as the contract requires. `last_seen_at` never advances while
+  unseen.
 - **Position:** floor position of the ground point, smoothed (EMA) with a
   15 cm deadband. It only changes when the person really moves, so detector
   jitter does not invalidate pending approvals.
@@ -162,9 +202,12 @@ tracks or creates casualties.
     track is kept, retries back off up to 5 s, and a retry reuses the same ID
     and body.
   - Camera registration gone (scenario reset): it registers again.
+  - Camera already registered with another mapping (409): it keeps posting
+    under that mapping and logs a warning.
   - Other 4xx: logged and dropped.
-- **Not published:** tracks without a valid floor position (uncalibrated, or a
-  point at or above the horizon) are omitted rather than guessed.
+- **Not published:** tracks without a valid floor position or zone
+  (uncalibrated, a point at or above the horizon, outside every zone) are
+  omitted rather than guessed.
 
 **Ground point:** standing or sitting people use the bottom-center of the box.
 Lying people use the hip midpoint when the hip keypoints are confident, else
@@ -177,24 +220,93 @@ the box center. Posture comes from:
 
 The result is majority-voted over 15 frames.
 
-**Re-attach:** if ByteTrack issues a new ID within 0.6 m of a track that is
-currently unseen and not yet lost, the old track ID continues, so casualties
-don't need re-linking after an occlusion. Set `tracking.reattach: false` to
-disable it.
+**Re-attach:** if ByteTrack issues a new ID close to a track that is currently
+unseen and not yet lost (0.6 m on the floor; 8 % of the frame diagonal in zones
+mode), the old track ID continues, so casualties don't need re-linking after
+an occlusion. Set `tracking.reattach: false` to disable it.
+
+## 3. Record / replay fallback
+
+Record each staged scenario once the camera is mounted and calibrated. If the
+live camera fails during the demo, replay the recording into the same backend
+under the same camera ID.
+
+```sh
+python -m cv.tools.record --scenario lying_two --duration 30 --countdown 5
+python -m cv.tools.record --config cv/config/phone.yaml --scenario phone_zone
+
+python -m cv.main --source cv/recordings/lying_two-<time>.mp4 --loop      # fallback
+```
+
+- **Files:** `cv/recordings/<scenario>-<UTC>.mp4` plus a `.json` sidecar with
+  the measured FPS, per-frame times, camera, mapping and the calibration valid
+  for that camera pose.
+- **Replay timing:** replay uses the sidecar's measured FPS (the container FPS
+  can be wrong; one test clip reported 28.5 while the measured rate was 29.45)
+  and its calibration. `--homography` overrides the calibration.
+- **Looping:** `--loop` restarts the clip and keeps reporting, so tracks stay
+  fresh.
+- **On screen:** the window shows `REPLAY`. Say on stage that it is a
+  recording.
+- **Privacy:** recordings are git-ignored and stay on the laptop. Never commit
+  captured imagery.
+
+## 4. Evaluation (Phase 3)
+
+```sh
+python -m cv.tools.evaluate --source cv/recordings/lying_two-<time>.mp4 \
+    --truth cv/eval/truth/lying_two.yaml
+python -m cv.tools.evaluate --source cv/recordings/standing_two-<time>.mp4 --expected 2
+```
+
+The evaluation runs the same detector, tracker and mapping on every frame,
+timed by the recording's frame times. The ground truth (copy
+`cv/eval/truth/example.yaml`) lists each staged person's tape-measured map
+position and optional posture. Each frame, tracks are matched one-to-one to
+people within 1 m.
+
+| Metric | Meaning |
+| --- | --- |
+| everyone detected / exact count | % of frames where every person is matched / the number of tracks equals N |
+| detected % per person, longest gap | Recall per person; the longest time without a match |
+| ID switches (per minute) | Times a person's matched track ID changed |
+| false-positive tracks | Detected tracks matched to nobody |
+| mapping error median / p90 / max, bias | Raw per-frame floor position vs the truth point, in cm; bias shows a systematic offset |
+| published position error | Same, for the smoothed and deadbanded position actually sent |
+| posture agreement | % of matched frames whose posture label equals the truth |
+| processing FPS, inference median / p95 | Offline speed (live speed comes from `--summary-json`) |
+
+Results go to `cv/eval/runs/<scenario>-<time>.json` and one row of
+`cv/eval/evaluation_runs.csv` (numbers only, safe to commit). With
+`--expected N` only the counts are scored.
+
+**Scenario checklist** (30 s each, from the mounted Logitech, positions measured):
+
+| Scenario | Setup |
+| --- | --- |
+| `standing_two` | Two people standing apart |
+| `sitting_two` | Two people sitting on the floor |
+| `lying_facing` / `lying_sideways` | One or two people lying, along and across the camera's view |
+| `partial_occlusion` | Lying person with a chair or box covering the legs or torso |
+| `crossing_occlusion` | One person walks between the camera and a lying person |
+| `phone_zone` | Phone camera, `--expected N` |
 
 ## Measured (dev MacBook, Apple silicon, MPS)
 
-These are synthetic and replay checks, not staged-scene numbers. The
-staged-scene evaluation is Phase 3.
-
 | Check | Result |
 | --- | --- |
-| Live C922, 1280×720, yolo11n-pose | 22.6 FPS loop, 19.5 ms median inference |
-| Replay, 640×480 (paced to 30 FPS) | 30 FPS, ~19 ms median inference |
-| Capture → backend accepted (live HTTP, visible reports) | median ~27 ms |
+| Live C922, 1280×720, yolo11n-pose | 22.6–26 FPS loop, 18–20 ms median inference |
+| **Logitech + phone at the same time**, both live to the backend, 20 s | 26.2 and 26.4 FPS; 28 + 16 reports accepted, 0 rejected; capture → accepted median 21.5 / 22.4 ms |
+| Phone in zones mode | Backend track `sim-camera:7:phone-1:…`, `location_basis: zone_estimate`, zone-b (3, 2) |
+| Record 8 s | 237 frames at 29.45 FPS measured; sidecar with frame times and calibration |
+| Replay with `--loop`, 20 s | 2 loops at 29.5 FPS paced, 20 reports accepted, 0 rejected |
+| Evaluate (count mode, 1 person at the desk) | Person detected in 100 % of 237 frames, 1 track ID; offline 61 FPS |
 | Real backend, 270-frame clip with a 3 s blackout | 64 / 64 reports accepted; tracks went visible → occluded → lost, new IDs afterwards |
 | Jitter (±3 px shake + noise), 3 tracks linked to casualties | 65 later reports, **0** scene-revision bumps |
 | Backend down for the whole run | Pipeline kept full speed, backed off, no crash |
+
+The two-camera and replay runs used a stand-in calibration, so their positions
+are not accuracy figures. Mapping error comes from the staged scenario runs.
 
 ## Tests
 
@@ -202,19 +314,23 @@ staged-scene evaluation is Phase 3.
 python -m pytest cv/tests
 ```
 
-The suite covers:
+89 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.
 - Ground-point and posture selection.
 - Track state: occluded, stale and lost, ID retirement, re-attach, deadband,
   duplicate IDs.
-- Publisher: heartbeat, last-accepted repeat, backoff, re-registration, legacy
-  format.
-- Camera reconnect.
+- Zones: polygon lookup, config validation, zone hysteresis, image-space
+  re-attach.
+- Publisher: heartbeat, last-accepted repeat, backoff, re-registration, zone
+  payloads, legacy format.
+- Camera reconnect and file looping.
+- The staged-area map check against the backend's demo map.
+- Evaluation: matching, ID switches, false positives, error and bias.
 - Contract tests that validate every payload against `backend/app/models.py` and
   `backend/app/simulation/models.py`, and drive the in-process backend through
-  a full track lifecycle (skipped without `requirements-dev.txt`).
+  full calibrated and zone lifecycles (skipped without `requirements-dev.txt`).
 
 ## Phase 0 — detection test harness
 
@@ -242,26 +358,35 @@ python -m cv.tools.detection_test \
 Each run prints and appends one row: the model, the % of frames with at least
 N people, mean confidence, FPS, and mean / p95 inference latency. The model is
 warmed up before timing starts. Values that cannot be computed are left blank,
-never written as zero. No frames are saved. Scenarios to compare:
-`standing`, `sitting`, `lying_facing_camera`, `lying_sideways`,
-`partially_covered`, `three_people` (`--expected 3`), `dim_light`.
+never written as zero. No frames are saved.
 
-## Integration notes (to confirm with Prince and Hillary)
+## Integration notes (for Prince and Hillary)
 
 Nothing here changes a shared file.
 
-- **Map scale:** the demo map is 24 × 20 m with responders at (0, 0) and
-  (20, 0); the staged floor is a few meters. Placing it with `--offset` keeps
-  real meters. Prince decides whether the demo instead uses a reset scenario
-  with a small map.
+- **Module location:** the code lives in `cv/`, matching the repository
+  layout, and runs as its own process that only talks HTTP to the backend.
+  Its tests run separately (`python -m pytest cv/tests`) because the root
+  `pyproject.toml` test paths cover only `backend/` and `optimization/`, and
+  the CV dependencies (torch, OpenCV) are not in `uv.lock`.
+- **`--prepare-only` and `logitech-1`:** `scripts.live_demo --prepare-only`
+  registers `logitech-1` with `calibration_ref: external-calibration-demo-001`.
+  The backend fixes the mapping for the epoch, so the real pipeline gets a 409
+  and keeps posting under that placeholder reference (verified: accepted, but
+  the provenance shows the placeholder). Two fixes would work: register
+  `logitech-1` from `--prepare-only` with the real reference that
+  `cv.tools.calibrate` prints, or skip `logitech-1` when the live CV runs. The
+  pipeline registers itself. `phone-1` already matches exactly.
 - **Confidence near 0.5:** a person whose smoothed confidence hovers around 0.5
   (partly out of frame) still bumps the scene revision on each crossing, which
   the backend treats as impactful. Keep linked casualties fully in view.
 - **Posture, stillness and breathing** are not sent: the backend rejects
   unknown fields. Phase 2 will add a schema proposal in `CONTRACT_PROPOSAL.md`,
   behind a config flag.
-- **For Hillary:** per track, the dashboard can already show
-  `camera.local_track_id`, `track.state` (visible / occluded / lost),
-  `last_seen_at` (age = staleness), `confidence` and `position`, plus
-  `camera.calibration_ref` / `location_basis: calibrated_world`.
-- **Module name:** the code lives in `cv/`, matching the repository layout.
+- **For Hillary:** per track, the dashboard can already show:
+  - `camera.camera_id` and `camera.local_track_id`.
+  - `track.state` (visible / occluded / lost) and `last_seen_at` (its age is
+    the staleness).
+  - `confidence` and `position`.
+  - `camera.location_basis`: `calibrated_world` with `calibration_ref`, or
+    `zone_estimate` with `zone_id`. Show the zone estimate as approximate.
