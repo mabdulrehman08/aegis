@@ -13,7 +13,9 @@ dispatches; pending, unapproved proposals are never shown.
 
 | Moment | LED matrix | On-board LED | Responder does | Bridge reports |
 | --- | --- | --- | --- | --- |
+| Power-on | `AEGIS` scrolls once | off | — | — |
 | Idle | one corner dot (`--` = not connected) | off | — | — |
+| Self-test | `AEGIS 1 OK` scrolls (`--` instead of `OK` = not connected; the number is the device) | off | three quick taps while idle | nothing |
 | Approved dispatch arrives | casualty label **flashes**, e.g. `A`, `C3` (fast = `immediate`) | blinks | — | `delivered` |
 | Responder accepts | label steady | on | short press | `acknowledged` |
 | Responder finishes | `OK`, then idle | off | hold 1.5 s | `completed` |
@@ -40,6 +42,19 @@ LED matrix. Connect the button with a **Grove-to-male-jumper** cable:
 Power comes from a USB power bank (USB-C). A Grove LED on pin 4 is optional;
 alerts use the on-board LED and the matrix. Never run the demo with nothing on
 pin 2: a floating input can read as phantom presses.
+
+## Enclosure
+
+`enclosure/aegis_case.scad` is a parametric OpenSCAD case with AEGIS branding, a
+window over the LED matrix (sized for both the UNO R4 WiFi and the UNO Q) and a
+pocket for the Grove button. Two bodies share the same lid design:
+
+- `part = "plate"`: straps onto the power bank (first device, Yoobao PDL20).
+- `part = "plate2"`: a cradle the power bank slides into (second device, Rivacase VA2612).
+
+Export with `openscad -D "part=\"plate\"" -o case.stl enclosure/aegis_case.scad`.
+Print in PLA, no supports, with a 5-8 mm brim. Measure your power bank and set
+`bank` / `bank2` first; STL files are not committed.
 
 ## Flash the firmware (once)
 
@@ -118,6 +133,28 @@ Arduino and the bridge laptop join: set `BRIDGE_HOST` in `arduino_secrets.h` to 
 laptop's address on it and run `start-bridge.ps1 -Wifi -WifiListen <that-ip>:7777`.
 The device port is unauthenticated, so the bridge only listens on the hotspot
 address, never on the campus network.
+
+## Two responders
+
+Each Arduino gets its own bridge on the same laptop. Device N reports as
+`responder-device-0N`, connects to port `7777 + N - 1`, and follows `responder-00N`.
+
+Flash the second board with its device number (the first board needs no flag):
+
+```powershell
+arduino-cli compile --upload --fqbn arduino:renesas_uno:unor4wifi -p <its COM port> `
+  --build-property "compiler.cpp.extra_flags=-DAEGIS_DEVICE_NUM=2" hardware/firmware/aegis_responder
+```
+
+Then run one bridge per device, each in its own terminal:
+
+```powershell
+.\hardware\scripts\start-bridge.ps1 -Wifi -Local              # device 1 -> responder-001, port 7777
+.\hardware\scripts\start-bridge.ps1 -Wifi -Local -Device 2    # device 2 -> responder-002, port 7778
+```
+
+Both boards join the same hotspot. The full `scripts.live_demo` rehearsal takes
+`responder-002` offline, so use `--prepare-only` when both devices should get tasks.
 
 ## On university WiFi: Tailscale
 
