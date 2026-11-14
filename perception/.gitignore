@@ -1,0 +1,5 @@
+# Downloaded weights, local outputs and recordings stay out of git.
+models/
+artifacts/
+recordings/
+config/homography.json

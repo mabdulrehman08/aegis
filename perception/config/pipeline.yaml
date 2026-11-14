@@ -1,0 +1,46 @@
+# AEGIS perception pipeline settings. Relative paths resolve against this
+# directory (perception/config/). Unknown keys are rejected.
+
+camera:
+  index: 0                  # Logitech is not always 0 on macOS; try 1 or 2
+  width: 1280
+  height: 720
+  fps: 30
+  reconnect_after_s: 2.0    # consecutive read failures before reopening
+  retry_interval_s: 1.0     # wait between reopen attempts
+
+detector:
+  model: yolo11n-pose.pt    # keypoints drive posture and the lying ground point
+  conf: 0.25                # low so ByteTrack can recover weak detections
+  imgsz: 640
+  device: auto              # auto = MPS on Apple silicon, else CPU
+  tracker: bytetrack.yaml
+
+mapping:
+  homography: homography.json   # written by perception.tools.calibrate
+  frame_id: demo-floor-1        # default frame for calibration; must match the scenario
+
+tracking:
+  occlusion_grace_s: 0.5    # published state stays "visible" through brief misses
+  stale_after_s: 2.0        # internal stale flag (not seen for this long)
+  lost_after_s: 30.0        # then one "lost" report and the ID is retired
+  position_alpha: 0.35      # EMA smoothing of the mapped floor position
+  confidence_alpha: 0.3     # EMA smoothing of detector confidence
+  deadband_m: 0.15          # published position only moves beyond this
+  posture_window: 15        # frames in the posture majority vote
+  keypoint_min_conf: 0.5
+  lying_max_torso_m: 0.75   # shoulder-hip distance on the floor plane below this = lying
+  reattach: true            # a new tracker ID near an occluded track resumes that track
+  reattach_radius_m: 0.6
+
+publisher:
+  base_url: http://127.0.0.1:8000
+  scenario_id: demo
+  endpoint: camera          # camera = /cameras/{camera_id}/observations; legacy = /observations
+  camera_id: logitech-1
+  actor: perception-askar
+  rate_hz: 5.0              # publish tick
+  heartbeat_s: 1.0          # unchanged tracks are re-sent at this interval
+  timeout_s: 1.5
+  max_backoff_s: 5.0
+  mock_log: artifacts/mock_observations.jsonl   # relative to perception/

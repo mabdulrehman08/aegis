@@ -1,0 +1,9 @@
+# Optional: lets perception tests validate payloads against the backend's own
+# Pydantic models and run an in-process backend. Versions follow uv.lock.
+-r requirements.txt
+fastapi==0.162.7
+pydantic==2.14.3
+httpx2==2.16.0
+ortools==9.15.6755
+uvicorn>=0.30,<1
+websockets>=14,<17
