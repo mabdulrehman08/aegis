@@ -8,9 +8,9 @@ The CV module reports **observations with confidence** only: where a person is
 on the floor, how sure the detector is, whether the track is currently seen,
 and (with `--signs`) DARPA-style observed signs: posture, movement, response
 to a command, eyes, breathing motion and visible blood. It never outputs
-injury type, diagnosis, severity, triage or heart rate. The backend may turn
-the signs into a *suggested* priority that a medic confirms or overrides in the
-dashboard (`CONTRACT_PROPOSAL.md`). All scenes and casualties are simulated.
+injury type, diagnosis, severity, triage or heart rate. The backend stores
+and shows the signs; only the medic-confirmed priority is used for dispatch
+(`CONTRACT_PROPOSAL.md`). All scenes and casualties are simulated.
 
 ## Status
 
@@ -118,7 +118,7 @@ publishes nothing and shows `UNCALIBRATED`. Tunables live in
 `config/pipeline.yaml`, `config/phone.yaml` and `config/bytetrack.yaml`;
 unknown keys are rejected.
 
-**Debug window:**
+**Debug window** (with `--signs` the responder view opens instead; **v** switches):
 
 - Boxes and skeletons, with the track ID, state, whether the person was seen
   this frame, confidence and posture.
@@ -278,8 +278,38 @@ python -m cv.main --send-signs           # also send them (backend must accept "
 ```
 
 Each sign is an observation with a confidence and an explicit
-`not_testable` / `not_tested`, shown under the track in the window. Wire
-format and backend asks: `CONTRACT_PROPOSAL.md`.
+`not_testable` / `not_tested`. Wire format and backend asks:
+`CONTRACT_PROPOSAL.md`.
+
+**Responder view** (`cv/monitor.py`, the default window with signs; **v**
+switches to the debug view with FPS, track states and publisher counters):
+
+- **A box beside each person.** It is tied to the person's chest by a line
+  and follows them. There is no side panel: the reading sits next to the body
+  it belongs to. The number and color match the dashboard track.
+- **Top line:** number, posture, and how long the person has been still.
+- **Eye row:** an open, closed or crossed-out eye with `EYES OPEN / CLOSED /
+  NOT VISIBLE`, and the response to a spoken command under it.
+- **Drop row:** `NO VISIBLE BLOOD` or `BLOOD: HEAD, L ARM`. The body regions
+  are outlined in amber on the person.
+- **Lungs row:** breaths per minute with a live chest trace, or why there is
+  no number yet (`MEASURING 6 s`, `CAMERA MUST BE STILL`, `PERSON MUST BE
+  STILL`, `CHEST NOT VISIBLE`).
+- **Colors:** white = observed; amber = notable observation (blood seen, no
+  chest motion, no response, eyes closed); grey = the camera cannot tell, with
+  the reason; cyan = listening after a command, with the time left. A trailing
+  `?` marks a low-confidence value.
+- **Placement:** a box goes to the side of its person where it covers no other
+  box and no face, and moves smoothly. Boxes shrink for more than 2 and more
+  than 4 people. People out of view keep a dimmed box for 5 s and are then
+  counted in the top bar.
+
+Text and icons are drawn with Pillow (`pillow` in `requirements.txt`).
+
+Colors mark observations, never severity, and there is no heart rate: the
+brief excludes camera-based heart rate and a webcam at 2–3 m cannot measure it.
+A pulse would need a contact sensor on the casualty. `signs_report
+--save-video` writes this same view.
 
 | Sign | How | Needs |
 | --- | --- | --- |
@@ -450,7 +480,7 @@ are not accuracy figures. Mapping error comes from the staged scenario runs.
 python -m pytest cv/tests
 ```
 
-143 tests. The suite covers:
+157 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.
@@ -470,6 +500,10 @@ python -m pytest cv/tests
   level face crops for sideways faces, signs sent only on visible reports.
 - Fake casualties: the scripted timeline, and the whole scene accepted by the
   in-process backend.
+- Responder view: amber findings, grey reasons, listening countdown, no
+  clinical words or heart rate, any frame size and crowd size; boxes stay in
+  the frame beside their person, off faces and off each other, and follow
+  smoothly.
 - Rooms and bodycam: camera still / steady / moving / unknown from the
   background (a moving person is not camera motion), camera sway not counted
   as movement while a raised hand still counts as a response, a moving camera
