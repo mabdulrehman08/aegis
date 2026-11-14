@@ -25,6 +25,7 @@ log = logging.getLogger("aegis.hardware")
 ACTIVE_STATUSES = ("dispatched", "delivered", "acknowledged")
 STATE_POLL_S = 0.4
 RETRY_S = 1.0
+MAX_BACKOFF_S = 5.0  # while the backend is unreachable, poll less often instead of hammering
 
 # request(method, path, body or None, headers) -> (status, parsed JSON or None)
 Requester = Callable[[str, str, Any, dict[str, str]], tuple[int, Any]]
@@ -43,13 +44,20 @@ def http_requester(base_url: str, timeout_s: float = 1.0) -> Requester:
                                      headers={"Content-Type": "application/json", **headers})
         try:
             with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-                return resp.status, json.loads(resp.read() or b"null")
+                raw = resp.read()
+            # A captive portal or proxy can answer 200 with an HTML page: treat any
+            # non-JSON reply as "backend unreachable", never as data.
+            return resp.status, json.loads(raw or b"null")
         except urllib.error.HTTPError as exc:
             try:
                 payload = json.loads(exc.read() or b"null")
             except ValueError:
                 payload = None
+            if exc.code in (502, 503, 504):
+                raise BackendUnavailable(f"HTTP {exc.code} from a proxy or overloaded backend") from exc
             return exc.code, payload
+        except ValueError as exc:
+            raise BackendUnavailable(f"non-JSON reply (captive portal?): {exc}") from exc
         except (urllib.error.URLError, OSError) as exc:
             raise BackendUnavailable(str(exc)) from exc
 
@@ -106,6 +114,7 @@ class BackendSync:
         self.outbox: deque[PendingEvent] = deque()
         self.stats = SyncStats()
         self._next_poll = 0.0
+        self._consecutive_failures = 0
         bridge.on_report = self._on_report
 
     # ------------------------------------------------------------ main loop
@@ -113,8 +122,11 @@ class BackendSync:
     def tick(self) -> None:
         now = self.clock()
         if now >= self._next_poll:
-            self._next_poll = now + STATE_POLL_S
             self.refresh()
+            # Back off exponentially while the backend is unreachable; recover at full speed.
+            failures = self._consecutive_failures
+            delay = STATE_POLL_S if failures == 0 else min(MAX_BACKOFF_S, STATE_POLL_S * 2 ** failures)
+            self._next_poll = self.clock() + delay
         self.flush()
 
     def refresh(self) -> None:
@@ -126,6 +138,9 @@ class BackendSync:
         if status != 200 or not isinstance(state, dict):
             self._backend_down(f"GET /state returned {status}")
             return
+        if not self.stats.last_state_ok and self._consecutive_failures:
+            log.info("backend reachable again after %d failed polls", self._consecutive_failures)
+        self._consecutive_failures = 0
         self.stats.last_state_ok = True
         self.reconcile(state)
 
@@ -224,10 +239,11 @@ class BackendSync:
         self.bridge.cancel()
 
     def _backend_down(self, why: Any) -> None:
-        if self.stats.last_state_ok:
-            log.warning("backend unavailable: %s", why)
+        if self.stats.last_state_ok or self._consecutive_failures == 0:
+            log.warning("backend unavailable: %s (device keeps working; events queue)", why)
         self.stats.last_state_ok = False
         self.stats.backend_errors += 1
+        self._consecutive_failures += 1
 
     @staticmethod
     def _severity(state: dict[str, Any], casualty_id: str) -> str | None:

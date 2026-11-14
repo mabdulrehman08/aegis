@@ -41,7 +41,10 @@ def main() -> int:
     parser.add_argument("--offline", action="store_true", help="No backend; manual test assignments")
     parser.add_argument("--scenario", default="demo")
     parser.add_argument("--responder", default="responder-001", help="Responder this device belongs to")
-    parser.add_argument("--backend-url", default="http://127.0.0.1:8000")
+    parser.add_argument("--backend-url", default="http://127.0.0.1:8000",
+                        help="Backend base URL; over Tailscale e.g. http://prince-laptop:8000")
+    parser.add_argument("--http-timeout", type=float, default=1.5,
+                        help="Seconds per backend request (raise on slow/crowded WiFi)")
     parser.add_argument("--log", type=Path, default=Path("hardware/logs/device-events.jsonl"))
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
@@ -63,7 +66,7 @@ def main() -> int:
         print("offline mode: nothing is sent to the backend")
     else:
         sync = BackendSync(
-            bridge, http_requester(args.backend_url), scenario_id=args.scenario,
+            bridge, http_requester(args.backend_url, args.http_timeout), scenario_id=args.scenario,
             responder_id=args.responder, event_log=JsonlLog(args.log),
             on_event=lambda e, result: print(f"EVENT {e['kind']:<12} {result:<9} {e['id']}"),
         )
@@ -74,13 +77,17 @@ def main() -> int:
 
     last_attempt = 0.0
     while True:
-        if not bridge.connected and time.monotonic() - last_attempt > 2.0:
-            last_attempt = time.monotonic()
-            if bridge.connect():
-                print(f"device connected: {bridge.device_id} fw={bridge.firmware}")
-        bridge.poll()
-        if sync:
-            sync.tick()
+        try:
+            if not bridge.connected and time.monotonic() - last_attempt > 2.0:
+                last_attempt = time.monotonic()
+                if bridge.connect():
+                    print(f"device connected: {bridge.device_id} fw={bridge.firmware}")
+            bridge.poll()
+            if sync:
+                sync.tick()
+        except Exception:  # never let one bad reply kill the bridge mid-demo
+            logging.exception("bridge loop error; continuing")
+            time.sleep(0.5)
 
         try:
             cmd = commands.get_nowait()

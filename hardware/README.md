@@ -55,6 +55,47 @@ delivery latency, posted/queued events and any rejections.
 Do not run the full `scripts.live_demo --base-url` rehearsal while the bridge is
 connected; it dispatches and acknowledges on its own.
 
+## On university WiFi: Tailscale
+
+Campus WiFi is crowded and usually blocks laptops from reaching each other.
+The Arduino also cannot join eduroam (its WiFi library has no WPA2-Enterprise)
+or click through the `puvisitor` sign-in page. So:
+
+- The **Arduino stays on USB** to the bridge laptop: no WiFi involved at all.
+- **Laptops talk over Tailscale**, a private team network that works on campus
+  WiFi, a phone hotspot, or a mix, and survives roaming between access points.
+
+One-time setup on **every** laptop (backend, bridge, dashboard, camera):
+
+```powershell
+winget install --id tailscale.tailscale
+tailscale up        # log in with the same team account
+tailscale status    # everyone should see everyone
+```
+
+Backend laptop (binds to its Tailscale address only, never the whole campus network):
+
+```powershell
+.\hardware\scripts\host-backend.ps1
+```
+
+Bridge laptop (checks Tailscale, waits for the backend, finds the Arduino, and
+restarts the bridge if it ever exits with an error):
+
+```powershell
+.\hardware\scripts\start-bridge.ps1 -Backend <backend-machine-name>   # name from `tailscale status`
+.\hardware\scripts\start-bridge.ps1 -Backend <name> -CheckOnly        # just run the checks
+.\hardware\scripts\start-bridge.ps1 -Local                            # backend on this laptop
+```
+
+If PowerShell refuses to run scripts, use
+`powershell -ExecutionPolicy Bypass -File hardware\scripts\start-bridge.ps1 ...`.
+
+On a bad network the bridge never crashes: an HTML sign-in page or a 502/503/504
+counts as "backend unreachable", polling backs off to at most every 5 s, device
+events queue in order and are delivered once the backend is back, and the
+Arduino keeps working (button presses are kept, not lost).
+
 ## How it connects
 
 The bridge polls `GET /state` about every 0.4 s and shows the newest active
