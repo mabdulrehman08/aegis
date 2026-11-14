@@ -263,6 +263,35 @@ avoid red and pink, and why the fine-tuned model is worth doing. A seated person
 desk moves the chest 5–15 px irregularly, so breathing stays `not_testable`;
 that is intended.
 
+### Fake casualties (no camera needed)
+
+For building the backend priority and the dashboard while nobody is staging:
+
+```sh
+python -m cv.tools.fake_casualties                 # positions to the backend now (5 tracks, 90 s)
+python -m cv.tools.fake_casualties --loop          # keep going until Ctrl-C
+python -m cv.tools.fake_casualties --send-signs    # once the backend accepts "signs"
+python -m cv.tools.fake_casualties --mock-backend --send-signs --fast
+    # whole scene instantly -> cv/artifacts/mock_fake-cam-1.jsonl (payload examples)
+```
+
+It sends through the same publisher as the camera, as its own camera
+`fake-cam-1` on the staged floor (x 12–16, y 6–10), so it never conflicts with
+`logitech-1` or `phone-1`. The scripted scene:
+
+| Track | Scripted signs |
+| --- | --- |
+| t1 | lying, blood on torso and leg, no response, eyes closed, breathing 26 /min |
+| t2 | lying, no response, eyes closed, no chest motion |
+| t3 | walking, blood on left arm, responds; out of view at 30–34 s |
+| t4 | sitting and responding; at 45 s lies down, eyes closed, stops responding |
+| t5 | standing, moving, responds, nothing visible |
+
+Commands are "given" at 10 s and 50 s. A sensible priority rule should put t1
+and t2 first, move t4 up after about 58 s, and keep t5 last. Until the backend
+accepts `signs`, `--send-signs` is rejected with HTTP 422 and the tool says so.
+At the end, or on Ctrl-C, every fake track is sent as `lost`.
+
 ## 3. Record / replay fallback
 
 Record each staged scenario once the camera is mounted and calibrated. If the
@@ -352,7 +381,7 @@ are not accuracy figures. Mapping error comes from the staged scenario runs.
 python -m pytest cv/tests
 ```
 
-120 tests. The suite covers:
+126 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.
@@ -370,6 +399,8 @@ python -m pytest cv/tests
   no_response only when watched, blood on the torso vs skin and pink cloth,
   breathing rate under noise and no false rate from 300 noise-only windows,
   level face crops for sideways faces, signs sent only on visible reports.
+- Fake casualties: the scripted timeline, and the whole scene accepted by the
+  in-process backend.
 - Contract tests that validate every payload against `backend/app/models.py` and
   `backend/app/simulation/models.py`, and drive the in-process backend through
   full calibrated and zone lifecycles (skipped without `requirements-dev.txt`).
