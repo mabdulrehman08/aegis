@@ -115,7 +115,8 @@ class CameraSigns(ContractModel):
     def serialize_wire_schema(self, handler):
         # Preserve the CV producer's external "schema" key in nested snapshots/events.
         values = handler(self)
-        values["schema"] = values.pop("schema_version")
+        if "schema_version" in values:
+            values["schema"] = values.pop("schema_version")
         return values
 
     @model_validator(mode="after")
