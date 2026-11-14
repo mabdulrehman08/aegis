@@ -1,5 +1,7 @@
 """Contract tests for simulation-only visual signs (never clinical assessment)."""
 
+from datetime import datetime
+
 from backend.app.simulation.store import SimulationStore
 from test_simulation_support import BASE, FakeClock, make_client, reset, state
 from test_simulation_cameras import CALIBRATED, position, report, register, post
@@ -33,7 +35,7 @@ def test_signs_are_visible_in_snapshot_and_events_without_assessment_or_revision
         assert track["latest_visible_signs"]["schema"] == "aegis-cv-signs/0.1"
         assert track["latest_visible_signs"]["posture"]["value"] == "lying"
         assert track["latest_observation"]["signs"]["posture"]["value"] == "lying"
-        assert track["signs_observed_at"] == first_seen
+        assert datetime.fromisoformat(track["signs_observed_at"].replace("Z", "+00:00")) == datetime.fromisoformat(first_seen)
         assert all(c["medical_assessment"] is None
                    for c in received.json()["state"]["scenario"]["casualties"])
         linked = client.post(f"{BASE}/associations", json={
