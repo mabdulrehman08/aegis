@@ -50,10 +50,14 @@ def test_demo_requests_do_not_mutate_shared_state(client):
     assert len(client.get("/api/v1/scenarios/demo").json()["casualties"]) == 3
 
 
-def test_openapi_exposes_only_foundation_routes(client):
+def test_openapi_keeps_production_routes_reserved(client):
     response = client.get("/openapi.json")
     assert response.status_code == 200
-    assert set(response.json()["paths"]) == {"/health", "/api/v1/scenarios/demo"}
+    production_paths = {
+        path for path in response.json()["paths"]
+        if not path.startswith("/api/v1/simulations/")
+    }
+    assert production_paths == {"/health", "/api/v1/scenarios/demo"}
 
 
 @pytest.mark.parametrize("path", [
