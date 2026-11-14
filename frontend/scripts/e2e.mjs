@@ -25,7 +25,7 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 
 try {
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/command`, { waitUntil: "domcontentloaded" });
   await page.locator(text("Scene map")).wait();
   ok("dashboard loaded with live state");
 

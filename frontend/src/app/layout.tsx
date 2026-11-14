@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AEGIS Command Center",
-  description: "Human-supervised emergency coordination dashboard (simulation).",
+  title: "AEGIS",
+  description: "AI-powered, human-supervised emergency response coordination (simulation prototype).",
 };
 
 export default function RootLayout({

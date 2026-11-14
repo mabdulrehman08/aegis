@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { fallbackState } from "@/lib/fallback";
@@ -416,13 +417,13 @@ export function CommandCenter() {
 
 function Logo() {
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <Link href="/" title="Back to AEGIS overview" className="flex shrink-0 items-center gap-1.5">
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
         <path d="M12 2 L21 6 V12 C21 17 17 21 12 22 C7 21 3 17 3 12 V6 Z" fill="none" stroke="var(--accent)" strokeWidth="1.8" />
         <path d="M12 7 V17 M7 12 H17" stroke="var(--accent)" strokeWidth="1.8" />
       </svg>
       <span className="mono text-[14px] font-bold tracking-[0.2em]">AEGIS</span>
-    </div>
+    </Link>
   );
 }
 

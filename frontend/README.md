@@ -16,7 +16,7 @@ uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 # terminal 2 — dashboard
 cd frontend
 npm install
-npm run dev            # http://localhost:3000
+npm run dev            # landing page http://localhost:3000 · dashboard http://localhost:3000/command
 
 # with both running
 npm run smoke          # end-to-end API check through the dev proxy
@@ -121,7 +121,9 @@ The operator at the command center watches the scene and relays guidance to fire
 ## Layout
 
 ```
-src/app/            layout, page, globals.css (design tokens)
+src/app/            layout, page (landing), command/page (dashboard), globals.css (design tokens)
+src/components/landing/  landing page sections (Hero + HeroScene, Problem, Loop, Technology,
+                    HumanLoop, Hardware, Closing) — illustrative data is always labelled
 src/components/     CommandCenter (layout + shortcuts), SceneMap, CamGrid, VideoFeed, CommsPanel,
                     VictimStrip, CommandDock, Overlays (alerts, setup, help), ProposalPanel,
                     TasksPanel, Timeline, LoopStrip, ui
