@@ -14,6 +14,8 @@ from fastapi import APIRouter, Body, Header, HTTPException, Query, Request, WebS
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from backend.app.models import CVObservation, MedicalAssessment, SceneMap
+from backend.app.services.evaluation_reports import EvaluationIndex
+from backend.app.simulation.comparisons import ComparisonReport, ComparisonRequest
 from backend.app.simulation.models import (
     ActionResponse,
     AssociationRequest,
@@ -22,6 +24,8 @@ from backend.app.simulation.models import (
     DecisionRequest,
     DispatchRequest,
     EventPage,
+    IntelligencePolicyRequest,
+    IntelligenceSnapshot,
     ReplanRequest,
     RequiredCapabilitiesRequest,
     ResetRequest,
@@ -142,6 +146,35 @@ def replan(request: Request, scenario_id: str, body: ReplanRequest,
            idempotency_key: str | None = IdempotencyKey) -> ActionResponse:
     """Explicit recommendation; supersedes open proposals. Advisory only."""
     return _call(request, lambda s: s.replan(scenario_id, body, idempotency_key))
+
+
+@router.get("/{scenario_id}/intelligence", response_model=IntelligenceSnapshot)
+def intelligence(request: Request, scenario_id: str) -> IntelligenceSnapshot:
+    """Advisory temporal and objective diagnostics after the normal freshness tick.
+
+    The tick itself may expire proposals or replan; the read installs nothing.
+    """
+    return _call(request, lambda s: s.intelligence(scenario_id))
+
+
+@router.put("/{scenario_id}/intelligence/policy", response_model=ActionResponse)
+def intelligence_policy(request: Request, scenario_id: str, body: IntelligencePolicyRequest,
+                        idempotency_key: str | None = IdempotencyKey) -> ActionResponse:
+    """Opt-in per-scenario intelligence settings; explicit actor required."""
+    return _call(request, lambda s: s.set_intelligence_policy(scenario_id, body,
+                                                              idempotency_key))
+
+
+@router.post("/{scenario_id}/intelligence/comparisons", response_model=ComparisonReport)
+def comparisons(request: Request, scenario_id: str, body: ComparisonRequest) -> ComparisonReport:
+    """Pure counterfactual reruns of the real solver; installs and authorizes nothing."""
+    return _call(request, lambda s: s.compare(scenario_id, body))
+
+
+@router.get("/{scenario_id}/intelligence/evaluations", response_model=EvaluationIndex)
+def evaluations(request: Request, scenario_id: str) -> EvaluationIndex:
+    """Committed synthetic evaluation artifacts with content digests."""
+    return _call(request, lambda s: s.evaluations(scenario_id))
 
 
 @router.get("/{scenario_id}/proposals/{proposal_id}/explanation")
