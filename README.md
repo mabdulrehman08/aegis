@@ -73,6 +73,8 @@ Confidence decay is an explicit heuristic, not a calibrated probability or a
 medical score. Synthetic evaluation reports are not evidence of clinical benefit.
 Any authorized PPO experiment lives on a separate experimental branch with its
 own dependencies; the backend never imports or requires a trained policy.
+See `docs/INTELLIGENCE_API.md` for dashboard payloads and
+`docs/DEPTH_VALIDATION.md` for measured evidence and interpretation limits.
 
 ## Demo-first integration
 
