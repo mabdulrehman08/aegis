@@ -2,6 +2,7 @@ import type {
   ActionResponse,
   EventPage,
   ExplanationResponse,
+  Position,
   ResponderStatus,
   SceneMap,
   Severity,
@@ -92,6 +93,14 @@ export const api = {
     request<ActionResponse>("PATCH", `/responders/${encodeURIComponent(responderId)}`, {
       mode: "simulation",
       status,
+      reported_at: nowIso(),
+    }),
+
+  /** Operator-reported position (e.g. confirmed on the bodycam). */
+  moveResponder: (responderId: string, position: Position) =>
+    request<ActionResponse>("PATCH", `/responders/${encodeURIComponent(responderId)}`, {
+      mode: "simulation",
+      position,
       reported_at: nowIso(),
     }),
 

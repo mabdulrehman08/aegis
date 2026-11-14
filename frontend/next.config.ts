@@ -5,6 +5,7 @@ import type { NextConfig } from "next";
 const backend = process.env.AEGIS_BACKEND_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   async rewrites() {
     return [{ source: "/aegis-api/:path*", destination: `${backend}/:path*` }];
   },

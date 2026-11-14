@@ -33,16 +33,37 @@ Config (all optional):
 
 ## What's on screen
 
-| Area | Backend source | Operator actions |
+The operator at the command center watches three panes and relays guidance to firefighters.
+
+| Pane | Shows | Operator actions |
 | --- | --- | --- |
-| Coordination loop strip | derived from `state` + events (current epoch) | — |
-| Casualties | `scenario.casualties`, `tracks[].casualty_id`, assignments | Enter human priority → `POST /casualties/{id}/assessment` |
-| Unconfirmed detections | `tracks` with `casualty_id: null`, `camera` provenance | Confirm new casualty / link → `POST /associations` |
-| Responders | `scenario.responders` | available / busy / offline → `PATCH /responders/{id}` |
-| Scene map | occupancy grid, obstacles, A* waypoints, CV tracks | **Block route** mode toggles cells → `PUT /map` (new revision, auto-replan) |
-| Recommendation | `proposals[current_proposal_id]`, `GET /proposals/{id}/explanation` | Approve / Reject exact revision → `POST /decision`; then **separate** Dispatch → `POST /dispatches`; Recompute → `POST /replan` |
-| Active tasks | `assignments` (dispatched → delivered → acknowledged → completed) | Rehearsal toggle exposes labelled SIMULATE device events |
-| Incident timeline | WebSocket events (+ `GET /events` backfill) | toggle system events |
+| **1 · Scene map** | Victims (priority colour, UNASSESSED = dashed "?"), firefighters, occupancy grid/walls, proposed vs dispatched A* routes, CV detections | **Block route** toggles cells → `PUT /map` (new revision, auto-replan); select victims/firefighters |
+| **2 · Building surveillance** | Building camera feed; victim summary (count, priorities, bleeding reported, pulses logged); per-victim card with pulse, bleeding, visible wound, breathing, CV confidence/staleness, task status | Set human priority → `POST /casualties/{id}/assessment`; log what is seen/reported (pulse bpm, bleeding, wound, breathing); confirm or link unconfirmed detections → `POST /associations` |
+| **3 · Firefighter cam** | Selected firefighter's bodycam feed with target overlay; turn-by-turn directions generated from the planned A* route; comms log | Hold-to-talk (button or Space) routes the operator mic to the firefighter's speaker; spoken quick commands and typed messages; availability → `PATCH /responders/{id}`; **mark position** then click the map → `PATCH /responders/{id}` with position |
+| Command bar | Current recommendation, approval countdown, active task acknowledgements | Approve exact revision → `POST /decision`; then separate **Dispatch** → `POST /dispatches`; ↻ replan |
+| Details drawer | Full recommendation + grounded explanation, task progress (rehearsal SIMULATE controls), incident timeline | — |
+
+### Video and audio
+
+- Each feed's **Connect feed** offers any camera attached to this computer (Logitech webcam;
+  an iPhone via macOS Continuity Camera works as a stand-in bodycam) or a stream URL
+  (MJPEG renders as an image, MP4/WebM as video). The choice is remembered per feed.
+  Nothing is recorded or sent anywhere; the backend has no video API.
+- **Voice link**: the operator's mic plays out of a chosen audio output (Chrome supports
+  per-device output) — e.g. a Bluetooth speaker clipped to the firefighter and paired to
+  this computer. The mic is muted unless the talk button/Space is held.
+- Quick commands and route directions use the browser's speech synthesis, which plays on
+  the **system default output** — set the firefighter's speaker as the system output for the demo.
+- Directions are map-relative (north = up) because firefighter heading isn't tracked;
+  "mark position" updates the backend position the router plans from.
+
+### Vitals and visible injuries (provisional)
+
+There is no vitals/injury schema in `shared/CONTRACT.md`, and the CV pipeline must not infer
+injuries. Pulse, bleeding, wound and breathing entries are therefore **operator observations**
+(seen on a feed or reported by the firefighter), stored in this browser per simulation epoch
+(`src/lib/fieldNotes.ts`). They never change priority automatically. Replace the hook with API
+calls once the backend adds a schema.
 
 ## Sync model
 
@@ -75,8 +96,9 @@ Config (all optional):
 
 ```
 src/app/            layout, page, globals.css (design tokens)
-src/components/     CommandCenter, SceneMap, CasualtyPanel, ResponderPanel,
-                    ProposalPanel, TasksPanel, Timeline, LoopStrip, ui
-src/lib/            types.ts (contract mirror), api.ts, useSimulation.ts, format.ts
+src/components/     CommandCenter (layout), SceneMap, SurveillancePane, FighterPane,
+                    VideoFeed, CommandBar, ProposalPanel, TasksPanel, Timeline, LoopStrip, ui
+src/lib/            types.ts (contract mirror), api.ts, useSimulation.ts, format.ts,
+                    navigation.ts (route → directions), fieldNotes.ts (operator observations)
 scripts/smoke.mjs   end-to-end check via the proxy
 ```

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { SEVERITY_META, ageSeconds, meters, shortId } from "@/lib/format";
 import type { AStarRoute, AssignmentStatus, SimulationProposal, SimulationState } from "@/lib/types";
 
@@ -21,9 +21,14 @@ interface Props {
   editMode: boolean;
   onToggleCell: (row: number, col: number) => void;
   now: number;
+  /** When set, the next map click reports world meters (used to mark a responder's position). */
+  onPlace?: ((x_m: number, y_m: number) => void) | null;
+  /** Responder whose routes are emphasised (others dimmed). */
+  focusResponderId?: string | null;
 }
 
-export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now }: Props) {
+export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId }: Props) {
+  const svgRef = useRef<SVGSVGElement>(null);
   const scene = state.scenario;
   const grid = scene.scene_map?.occupancy_grid ?? null;
 
@@ -60,9 +65,23 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
   return (
     <svg
       viewBox={`${-PAD} ${-PAD} ${bounds.w + PAD * 2} ${bounds.h + PAD * 2}`}
-      className="h-full w-full select-none"
+      ref={svgRef}
+      className={`h-full w-full select-none ${onPlace ? "cursor-crosshair" : ""}`}
       role="img"
       aria-label="Scene map in meters"
+      onClickCapture={(e) => {
+        if (!onPlace || !svgRef.current) return;
+        e.stopPropagation();
+        const pt = svgRef.current.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const m = svgRef.current.getScreenCTM();
+        if (!m) return;
+        const p = pt.matrixTransform(m.inverse());
+        const x = Math.min(bounds.w, Math.max(0, p.x)) + bounds.x0;
+        const y = bounds.h - Math.min(bounds.h, Math.max(0, p.y)) + bounds.y0;
+        onPlace(Math.round(x * 10) / 10, Math.round(y * 10) / 10);
+      }}
       onClick={() => !editMode && onSelect(null)}
     >
       <defs>
@@ -156,7 +175,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
               strokeLinejoin="round"
               strokeLinecap="round"
               markerEnd="url(#arrow)"
-              opacity={0.95}
+              opacity={focusResponderId && a.responder_id !== focusResponderId ? 0.4 : 0.95}
               pointerEvents="none"
             />
           ),
@@ -166,7 +185,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
       {proposed.map(
         (a) =>
           a.route && (
-            <g key={`p-${a.casualty_id}`} pointerEvents="none">
+            <g key={`p-${a.casualty_id}`} pointerEvents="none" opacity={focusResponderId && a.responder_id !== focusResponderId ? 0.35 : 1}>
               <path d={path(a.route)} fill="none" stroke="var(--accent)" strokeOpacity={0.18} strokeWidth={0.5} strokeLinejoin="round" />
               <path
                 d={path(a.route)}
@@ -288,7 +307,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
         const x = X(r.position.x_m);
         const y = Y(r.position.y_m);
         const color = r.status === "available" ? "var(--accent)" : r.status === "busy" ? "var(--warn)" : "var(--faint)";
-        const sel = selectedId === r.id;
+        const sel = selectedId === r.id || focusResponderId === r.id;
         const letter = r.display_name.replace(/^Mock Responder /, "").charAt(0).toUpperCase();
         return (
           <g
@@ -307,7 +326,14 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
             {r.status === "offline" && (
               <path d={`M${x - 0.6},${y - 0.6} L${x + 0.6},${y + 0.6}`} stroke="var(--danger)" strokeWidth={0.1} />
             )}
-            <text x={x} y={y - 0.85} fontSize={0.42} textAnchor="middle" fill={color} className="mono">
+            <text
+              x={x < 3 ? x - 0.6 : x > bounds.w - 3 ? x + 0.6 : x}
+              y={y - 0.85}
+              fontSize={0.42}
+              textAnchor={x < 3 ? "start" : x > bounds.w - 3 ? "end" : "middle"}
+              fill={color}
+              className="mono"
+            >
               {shortId(r.id)} · {r.status.toUpperCase()}
             </text>
           </g>
