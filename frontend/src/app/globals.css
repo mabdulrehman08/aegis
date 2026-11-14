@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #06090d;
+  --panel: #0b1117;
+  --panel-2: #101921;
+  --line: #1b2731;
+  --line-strong: #2a3a47;
+  --text: #dbe5ee;
+  --muted: #7f909f;
+  --faint: #4b5a67;
+
+  --accent: #38d0dc;
+  --accent-dim: #164c52;
+  --warn: #f5a524;
+  --ok: #3ecf7a;
+  --danger: #f05252;
+  --info: #5b9cf5;
+
+  /* Triage display colors (labels are always human-entered). */
+  --sev-immediate: #ef4444;
+  --sev-delayed: #eab308;
+  --sev-minor: #22c55e;
+  --sev-expectant: #8b95a3;
+  --sev-deceased: #3a4450;
+  --sev-unassessed: #c9d4de;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -2;
+  }
+}
+.route-proposed {
+  animation: dash-flow 1.2s linear infinite;
+}
+
+@keyframes ring-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+.pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-pulse 1.8s ease-out infinite;
+}
+
+@keyframes blink-soft {
+  50% {
+    opacity: 0.35;
+  }
+}
+.blink {
+  animation: blink-soft 1.4s ease-in-out infinite;
+}
+
+/* Diagonal hatching background for the SIMULATION banner */
+.sim-stripe {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(245, 165, 36, 0.16) 0 8px,
+    rgba(245, 165, 36, 0.06) 8px 16px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-proposed,
+  .pulse-ring,
+  .blink {
+    animation: none;
+  }
+}
