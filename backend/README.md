@@ -4,8 +4,12 @@
 and `app/services/` loads synthetic fixtures. Tests live in `tests/`.
 Run commands from the repository root; see `../docs/LOCAL_SETUP.md`.
 
-Only health and read-only demo retrieval are implemented. ML recommendations,
-authentication, persistence, approval auditing, WebSockets, and dispatch are future
-work. No model or CV output is a medical assessment or dispatch authorization.
-Reserved tracking, map, route, proposal metadata, and device-event models validate
-payload shape only; they do not enable those features or real dispatch.
+Health and immutable demo retrieval remain unchanged. `app/simulation/` adds the
+locked in-memory local coordinator, explicit simulated human decisions, simulated
+device reports, and WebSocket synchronization. Optimization is a separate pure
+module. See `../docs/INTEGRATION.md` for actual routes and payloads.
+
+Production endpoints in the shared contract remain reserved. Local operator IDs
+are not authenticated identities; local records are not a durable audit trail.
+No CV/LLM output is a medical assessment or dispatch authorization. No real
+hardware command path or real emergency dispatch service is implemented.

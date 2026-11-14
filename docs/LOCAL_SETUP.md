@@ -22,6 +22,9 @@ Use a second terminal at the same root:
 curl --fail http://127.0.0.1:8000/health
 curl --fail http://127.0.0.1:8000/api/v1/scenarios/demo
 uv run pytest
+uv run python -m scripts.demo
+uv run python -m scripts.live_demo
+uv run python -m scripts.benchmark --output reports/benchmark.json
 ```
 
 Health returns `{"status":"ok","service":"aegis-backend","version":"0.1.0"}`.
@@ -32,6 +35,13 @@ external devices, clinical systems, or future dependencies are ready.
 Open `http://127.0.0.1:8000/docs` or `/openapi.json` for the implemented API.
 There is no environment configuration required. CORS is intentionally not enabled;
 when the frontend exists, agree an explicit local-origin allowlist or proxy.
+Use a single backend worker. Mutable scenarios are isolated local simulations,
+not shared between processes or persisted after restart. The CLI demo uses an
+in-process TestClient and does not require a separately running server or hardware.
+See `INTEGRATION.md` for the live HTTP/WebSocket integration sequence.
+See `LIVE_DEMO.md` for the two-actor rehearsal and
+`uv run python -m scripts.live_demo --base-url http://127.0.0.1:8000 --prepare-only`
+to reset and register mappings without injecting mock observations or approvals.
 
 ## Without uv
 
@@ -39,7 +49,7 @@ when the frontend exists, agree an explicit local-origin allowlist or proxy.
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install 'fastapi>=0.115,<1' 'pydantic>=2.10,<3' 'uvicorn>=0.30,<1' 'httpx2>=2,<3' 'pytest>=8,<10'
+python -m pip install 'fastapi>=0.115,<1' 'pydantic>=2.10,<3' 'uvicorn>=0.30,<1' 'httpx2>=2,<3' 'pytest>=8,<10' 'ortools>=9.14,<10' 'websockets>=14,<17'
 python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 python -m pytest
 ```
@@ -53,6 +63,8 @@ On Windows activate with `.venv\Scripts\Activate.ps1` instead of `source`.
 - Port in use: choose `--port 8001` and change the URLs accordingly.
 - Fixture errors: validate `shared/mock/scenario.demo.json` against the contract;
   malformed data must fail rather than silently inventing casualty information.
-- Stop the server with Ctrl-C. The fixture is read-only; no state is written.
+- Stop the server with Ctrl-C. The original fixture remains read-only; simulation
+  state is kept only in memory. All scenes contain synthetic people and locations.
 - Do not expose the server publicly. Authentication, authorization, persistence,
-  audit records, and safe dispatch gates are not implemented.
+  durable auditing, and real dispatch gates are not implemented. The simulation
+  approval checks are not a substitute for production authorization.
