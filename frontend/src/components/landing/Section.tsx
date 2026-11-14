@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ParallaxDecor, Reveal, SectionTransition } from "./motion";
 
 export function SectionHeading({
   index,
@@ -16,21 +17,49 @@ export function SectionHeading({
   const center = align === "center";
   return (
     <div className={`max-w-3xl ${center ? "mx-auto text-center" : ""}`}>
-      <p className={`lp-eyebrow flex items-center gap-3 ${center ? "justify-center" : ""}`}>
-        {index && <span className="text-faint">{index}</span>}
-        <span className="h-px w-8 bg-accent/50" aria-hidden="true" />
-        {eyebrow}
-      </p>
-      <h2 className="mt-4 text-balance text-[clamp(28px,4vw,44px)] font-semibold leading-[1.08] tracking-[-0.02em] text-text">{title}</h2>
-      {lede && <p className="mt-5 text-pretty text-[16px] leading-relaxed text-muted sm:text-[17px]">{lede}</p>}
+      <Reveal>
+        <p className={`lp-eyebrow flex items-center gap-3 ${center ? "justify-center" : ""}`}>
+          {index && <span className="text-faint">{index}</span>}
+          <span className="h-px w-8 bg-accent/50" aria-hidden="true" />
+          {eyebrow}
+        </p>
+      </Reveal>
+      <Reveal delay={0.06}>
+        <h2 className="mt-4 text-balance text-[clamp(28px,4vw,44px)] font-semibold leading-[1.08] tracking-[-0.02em] text-text">{title}</h2>
+      </Reveal>
+      {lede && (
+        <Reveal delay={0.12}>
+          <p className="mt-5 text-pretty text-[16px] leading-relaxed text-muted sm:text-[17px]">{lede}</p>
+        </Reveal>
+      )}
     </div>
   );
 }
 
-export function Section({ id, children, className = "" }: { id?: string; children: ReactNode; className?: string }) {
+/**
+ * A page section living in the shared 3D space: static outer element (anchor target, no transform),
+ * parallax background, and a scroll-linked transition around the content.
+ * `overflow-clip` (not hidden) keeps `position: sticky` working inside.
+ */
+export function Section({
+  id,
+  children,
+  className = "",
+  seed = 0,
+  decor = true,
+}: {
+  id?: string;
+  children: ReactNode;
+  className?: string;
+  seed?: number;
+  decor?: boolean;
+}) {
   return (
-    <section id={id} className={`relative border-t border-line/70 py-24 sm:py-28 ${className}`}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
+    <section id={id} className={`relative isolate overflow-clip border-t border-line/70 py-24 sm:py-28 ${className}`}>
+      {decor && <ParallaxDecor seed={seed} />}
+      <SectionTransition>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
+      </SectionTransition>
     </section>
   );
 }

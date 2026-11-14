@@ -122,11 +122,15 @@ The operator at the command center watches the scene and relays guidance to fire
 
 ```
 src/app/            layout, page (landing), command/page (dashboard), globals.css (design tokens)
-src/components/landing/  landing page sections (Hero + HeroScene, Problem, Loop, Technology,
-                    HumanLoop, Hardware, Closing) — illustrative data is always labelled
-src/components/     CommandCenter (layout + shortcuts), SceneMap, CamGrid, VideoFeed, CommsPanel,
+src/components/landing/  landing page (illustrative data is always labelled):
+                    ScrollExperience (motion shell), motion (SectionTransition, ParallaxDecor,
+                    Reveal, MotionCard), FloatingSectionNavigation, Hero + InteractiveHeroScene,
+                    Problem, Workflow3D, TechnologyArchitecture, HumanLoop, Hardware, Closing
+src/components/     CommandCenter (layout + shortcuts), FeedStage (click-to-swap primary/secondary feeds;
+                    feeds stay mounted, only their slot changes), SceneMap, CamGrid (camera feed views), VideoFeed, CommsPanel,
                     VictimStrip, CommandDock, Overlays (alerts, setup, help), ProposalPanel,
-                    TasksPanel, Timeline, LoopStrip, ui
+                    TasksPanel, Timeline, LoopStrip, ui, theme (ThemeProvider/ThemeToggle — light/dark
+                    shared by landing + dashboard, saved in localStorage "aegis.theme")
 src/lib/            types.ts (contract mirror), api.ts, useSimulation.ts, format.ts,
                     insights.ts (camera-sign wording, ack source, replan diff), useAlerts.ts,
                     navigation.ts (route → directions), fieldNotes.ts, preview.ts (mock adapters),

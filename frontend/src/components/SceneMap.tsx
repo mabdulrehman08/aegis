@@ -91,8 +91,8 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
     >
       <defs>
         <pattern id="hatch" width="0.4" height="0.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="0.4" height="0.4" fill="#18222b" />
-          <line x1="0" y1="0" x2="0" y2="0.4" stroke="#33434f" strokeWidth="0.14" />
+          <rect width="0.4" height="0.4" fill="var(--map-hatch-bg)" />
+          <line x1="0" y1="0" x2="0" y2="0.4" stroke="var(--map-hatch-line)" strokeWidth="0.14" />
         </pattern>
         <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" />
@@ -100,7 +100,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
       </defs>
 
       {/* floor */}
-      <rect x={0} y={0} width={bounds.w} height={bounds.h} fill="#080d12" stroke="var(--line-strong)" strokeWidth={0.06} />
+      <rect x={0} y={0} width={bounds.w} height={bounds.h} fill="var(--map-floor)" stroke="var(--line-strong)" strokeWidth={0.06} />
 
       {floorPlan && (
         <image href={floorPlan.url} x={0} y={0} width={bounds.w} height={bounds.h} preserveAspectRatio="none" opacity={floorPlan.opacity} pointerEvents="none" />
@@ -113,7 +113,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
           const row = Math.floor(i / grid.width);
           const x = grid.origin.x_m + col * grid.resolution_m;
           const y = grid.origin.y_m + (row + 1) * grid.resolution_m;
-          const fill = v === 100 ? "url(#hatch)" : v === -1 ? "#0d1318" : "transparent";
+          const fill = v === 100 ? "url(#hatch)" : v === -1 ? "var(--map-unknown)" : "transparent";
           return (
             <rect
               key={i}
@@ -122,9 +122,9 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
               width={grid.resolution_m}
               height={grid.resolution_m}
               fill={fill}
-              stroke="#121b23"
+              stroke="var(--map-cell-line)"
               strokeWidth={0.02}
-              className={editMode ? "cursor-crosshair hover:fill-[#2a1c10]" : undefined}
+              className={editMode ? "cursor-crosshair hover:fill-[var(--map-edit-hover)]" : undefined}
               onClick={
                 editMode
                   ? (e) => {
@@ -145,7 +145,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
           key={o.id}
           points={o.vertices.map((v) => `${X(v.x_m)},${Y(v.y_m)}`).join(" ")}
           fill="none"
-          stroke="#56687a"
+          stroke="var(--map-obstacle)"
           strokeWidth={0.07}
           pointerEvents="none"
         />
@@ -301,14 +301,14 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
             {sel && <circle cx={x} cy={y} r={1.05} fill="none" stroke="var(--text)" strokeWidth={0.06} />}
             {sev === "unassessed" ? (
               <>
-                <circle cx={x} cy={y} r={0.6} fill="#0b1117" stroke={meta.color} strokeWidth={0.09} strokeDasharray="0.22 0.14" />
+                <circle cx={x} cy={y} r={0.6} fill="var(--map-mark-bg)" stroke={meta.color} strokeWidth={0.09} strokeDasharray="0.22 0.14" />
                 <text x={x} y={y + 0.24} fontSize={0.7} textAnchor="middle" fill={meta.color} fontWeight={700}>
                   ?
                 </text>
               </>
             ) : (
               <>
-                <circle cx={x} cy={y} r={0.6} fill={meta.color} stroke="#06090d" strokeWidth={0.08} />
+                <circle cx={x} cy={y} r={0.6} fill={meta.color} stroke="var(--map-mark-outline)" strokeWidth={0.08} />
                 {sev === "deceased" && <circle cx={x} cy={y} r={0.6} fill="none" stroke="#8b95a3" strokeWidth={0.06} />}
               </>
             )}
@@ -344,7 +344,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
             className="cursor-pointer"
           >
             {sel && <rect x={x - 0.95} y={y - 0.95} width={1.9} height={1.9} rx={0.3} fill="none" stroke="var(--text)" strokeWidth={0.06} />}
-            <rect x={x - 0.6} y={y - 0.6} width={1.2} height={1.2} rx={0.18} fill="#06090d" stroke={color} strokeWidth={0.12} />
+            <rect x={x - 0.6} y={y - 0.6} width={1.2} height={1.2} rx={0.18} fill="var(--map-mark-bg)" stroke={color} strokeWidth={0.12} />
             <text x={x} y={y + 0.22} fontSize={0.62} textAnchor="middle" fill={color} fontWeight={700} className="mono">
               {letter}
             </text>

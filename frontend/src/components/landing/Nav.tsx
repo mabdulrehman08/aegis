@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "@/components/theme";
 
 export const NAV_LINKS = [
   { href: "#platform", label: "Platform" },
@@ -53,10 +54,11 @@ export function Nav() {
           ))}
         </ul>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <ThemeToggle />
           <Link
             href="/command"
-            className="hidden items-center gap-2 rounded-[3px] bg-accent px-4 py-2 text-[13px] font-medium text-bg transition hover:bg-[#5fdde6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:inline-flex"
+            className="hidden items-center gap-2 lp-press rounded-[3px] bg-accent px-4 py-2 text-[13px] font-medium text-on-accent hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:inline-flex"
           >
             Launch Command Center <ArrowRight size={14} aria-hidden="true" />
           </Link>
@@ -84,7 +86,7 @@ export function Nav() {
               </li>
             ))}
           </ul>
-          <Link href="/command" className="mt-4 flex items-center justify-center gap-2 rounded-[3px] bg-accent px-4 py-2.5 text-[14px] font-medium text-bg">
+          <Link href="/command" className="mt-4 flex items-center justify-center gap-2 rounded-[3px] bg-accent px-4 py-2.5 text-[14px] font-medium text-on-accent">
             Launch Command Center <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </div>

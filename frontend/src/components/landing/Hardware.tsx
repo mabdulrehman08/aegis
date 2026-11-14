@@ -24,7 +24,7 @@ function Board({ state, onPress }: { state: HwState; onPress: () => void }) {
   const acked = state === "acked";
   const lit = pending ? BANG : acked ? TICK : [];
   const litSet = new Set(lit.map(([c, r]) => `${c},${r}`));
-  const ledColor = pending ? "var(--warn)" : acked ? "var(--accent)" : "#24313b";
+  const ledColor = pending ? "var(--warn)" : acked ? "var(--accent)" : "var(--line-strong)";
 
   const press = () => pending && onPress();
 
@@ -37,15 +37,15 @@ function Board({ state, onPress }: { state: HwState; onPress: () => void }) {
       </defs>
 
       {/* cables */}
-      <path d="M318 100 C360 100, 360 90, 400 90" fill="none" stroke="#3a4a57" strokeWidth="5" strokeLinecap="round" />
-      <path d="M318 210 C360 210, 360 245, 400 245" fill="none" stroke="#3a4a57" strokeWidth="5" strokeLinecap="round" />
+      <path d="M318 100 C360 100, 360 90, 400 90" fill="none" stroke="var(--line-strong)" strokeWidth="5" strokeLinecap="round" />
+      <path d="M318 210 C360 210, 360 245, 400 245" fill="none" stroke="var(--line-strong)" strokeWidth="5" strokeLinecap="round" />
       {pending && <path d="M318 100 C360 100, 360 90, 400 90" pathLength={100} fill="none" stroke="var(--warn)" strokeWidth="3" strokeLinecap="round" className="lp-packet" />}
       {acked && <path d="M400 245 C360 245, 360 210, 318 210" pathLength={100} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" className="lp-packet" />}
 
       {/* board */}
       <rect x="40" y="45" width="280" height="220" rx="10" fill="#0c2730" stroke="var(--accent)" strokeOpacity="0.35" />
       <rect x="26" y="82" width="26" height="30" rx="3" fill="#7f909f" />
-      <text x="58" y="100" className="mono" fontSize="8" fill="var(--muted)">USB-C</text>
+      <text x="58" y="100" className="mono" fontSize="8" fill="#9fb0bf">USB-C</text>
       <rect x="24" y="190" width="36" height="42" rx="3" fill="#141b21" stroke="#2a3a47" />
       {Array.from({ length: 16 }, (_, i) => (
         <rect key={`t${i}`} x={130 + i * 11} y="54" width="7" height="7" fill="#141b21" stroke="#3a4a57" strokeWidth="0.6" />
@@ -71,30 +71,30 @@ function Board({ state, onPress }: { state: HwState; onPress: () => void }) {
           );
         }),
       )}
-      <text x="96" y="190" className="mono" fontSize="8" fill="var(--muted)">12×8 LED MATRIX</text>
+      <text x="96" y="190" className="mono" fontSize="8" fill="#9fb0bf">12×8 LED MATRIX</text>
 
       {/* MCU module */}
       <rect x="226" y="140" width="76" height="56" rx="3" fill="#1a232b" stroke="#3a4a57" />
-      <text x="264" y="166" className="mono" fontSize="8" fill="var(--muted)" textAnchor="middle">WiFi</text>
-      <text x="264" y="178" className="mono" fontSize="8" fill="var(--muted)" textAnchor="middle">module</text>
+      <text x="264" y="166" className="mono" fontSize="8" fill="#9fb0bf" textAnchor="middle">WiFi</text>
+      <text x="264" y="178" className="mono" fontSize="8" fill="#9fb0bf" textAnchor="middle">module</text>
 
       {/* Grove ports */}
       <rect x="300" y="92" width="18" height="16" fill="#e5e7eb" opacity="0.85" />
       <rect x="300" y="202" width="18" height="16" fill="#e5e7eb" opacity="0.85" />
-      <text x="74" y="226" className="mono" fontSize="10" fontWeight="600" fill="var(--text)">ARDUINO UNO R4 WiFi</text>
-      <text x="74" y="239" className="mono" fontSize="8" fill="var(--muted)">responder device · Grove shield</text>
+      <text x="74" y="226" className="mono" fontSize="10" fontWeight="600" fill="#e6eef5">ARDUINO UNO R4 WiFi</text>
+      <text x="74" y="239" className="mono" fontSize="8" fill="#9fb0bf">responder device · Grove shield</text>
 
       {/* Grove LED */}
-      <rect x="400" y="40" width="120" height="100" rx="4" fill="#0f1a22" stroke="#2a3a47" />
+      <rect x="400" y="40" width="120" height="100" rx="4" fill="var(--panel-2)" stroke="var(--line-strong)" />
       <text x="410" y="56" className="mono" fontSize="8.5" fill="var(--muted)">GROVE LED</text>
       {state !== "idle" && <circle cx="460" cy="92" r="20" fill={ledColor} opacity="0.55" filter="url(#hw-glow)" className={pending ? "blink" : undefined} />}
-      <circle cx="460" cy="92" r="13" fill={ledColor} stroke={state === "idle" ? "#3a4a57" : ledColor} className={pending ? "blink" : undefined} />
+      <circle cx="460" cy="92" r="13" fill={ledColor} stroke={state === "idle" ? "var(--faint)" : ledColor} className={pending ? "blink" : undefined} />
       <text x="460" y="128" className="mono" fontSize="8.5" fill={pending ? "var(--warn)" : acked ? "var(--accent)" : "var(--faint)"} textAnchor="middle">
         {pending ? "BLINKING · TASK" : acked ? "SOLID · ACKED" : "OFF"}
       </text>
 
       {/* Grove button (interactive) */}
-      <rect x="400" y="190" width="120" height="110" rx="4" fill="#0f1a22" stroke={pending ? "var(--warn)" : "#2a3a47"} strokeDasharray={pending ? "4 3" : undefined} />
+      <rect x="400" y="190" width="120" height="110" rx="4" fill="var(--panel-2)" stroke={pending ? "var(--warn)" : "var(--line-strong)"} strokeDasharray={pending ? "4 3" : undefined} />
       <text x="410" y="206" className="mono" fontSize="8.5" fill="var(--muted)">GROVE BUTTON</text>
       <g
         role="button"
@@ -111,8 +111,8 @@ function Board({ state, onPress }: { state: HwState; onPress: () => void }) {
         style={{ cursor: pending ? "pointer" : "default", outline: "none" }}
         className="group"
       >
-        <rect x="438" y="222" width="44" height="44" rx="4" fill="#1a232b" stroke="#3a4a57" />
-        <circle cx="460" cy="244" r="15" fill={acked ? "#16303a" : "#2a3a47"} stroke={pending ? "var(--warn)" : "#4b5a67"} strokeWidth="2" className="transition-all group-hover:brightness-125 group-focus-visible:stroke-[var(--accent)]" />
+        <rect x="438" y="222" width="44" height="44" rx="4" fill="var(--panel)" stroke="var(--line-strong)" />
+        <circle cx="460" cy="244" r="15" fill={acked ? "var(--accent-dim)" : "var(--line-strong)"} stroke={pending ? "var(--warn)" : "var(--faint)"} strokeWidth="2" className="transition-all group-hover:brightness-125 group-focus-visible:stroke-[var(--accent)]" />
         {pending && <circle cx="460" cy="244" r="15" fill="none" stroke="var(--warn)" className="pulse-ring" />}
       </g>
       <text x="460" y="288" className="mono" fontSize="8.5" fill={pending ? "var(--warn)" : "var(--faint)"} textAnchor="middle">
@@ -127,7 +127,7 @@ export function Hardware() {
   const reached = (at: "pending" | "acked") => (at === "pending" ? state !== "idle" : state === "acked");
 
   return (
-    <Section id="hardware">
+    <Section id="hardware" seed={6}>
       <SectionHeading
         index="05"
         eyebrow="Physical response"
@@ -147,7 +147,7 @@ export function Hardware() {
               <button
                 type="button"
                 onClick={() => setState("pending")}
-                className="inline-flex items-center gap-2 rounded-[3px] bg-accent px-4 py-2 text-[13.5px] font-medium text-bg hover:bg-[#5fdde6]"
+                className="inline-flex items-center gap-2 lp-press rounded-[3px] bg-accent px-4 py-2 text-[13.5px] font-medium text-on-accent hover:bg-accent-hover"
               >
                 <Send size={14} aria-hidden="true" /> Send example task
               </button>
@@ -158,7 +158,7 @@ export function Hardware() {
                 <button
                   type="button"
                   onClick={() => setState("acked")}
-                  className="rounded-[3px] border border-warn/50 px-3 py-1.5 text-[12.5px] text-warn hover:bg-warn/10"
+                  className="lp-press rounded-[3px] border border-warn/50 px-3 py-1.5 text-[12.5px] text-warn hover:bg-warn/10"
                 >
                   Press button
                 </button>
@@ -185,7 +185,7 @@ export function Hardware() {
                 <li key={s.label} className="flex items-center gap-3 border-b border-line/60 py-2.5 last:border-0">
                   <span
                     className={`mono flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10.5px] ${
-                      waiting ? "border-dashed border-warn text-warn" : done ? "border-accent bg-accent text-bg" : "border-line-strong text-faint"
+                      waiting ? "border-dashed border-warn text-warn" : done ? "border-accent bg-accent text-on-accent" : "border-line-strong text-faint"
                     }`}
                   >
                     {done ? <Check size={12} aria-hidden="true" /> : waiting ? <Clock size={11} aria-hidden="true" /> : i + 1}

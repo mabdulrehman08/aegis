@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Github, ShieldAlert, UserCheck, Eye, FlaskConical } from "lucide-react";
 import { Logo } from "./Logo";
 import { Section, SectionHeading } from "./Section";
+import { MotionCard, SectionTransition } from "./motion";
 
 /** Set NEXT_PUBLIC_AEGIS_REPO_URL to override; the GitHub link is hidden if empty. */
 const REPO_URL = process.env.NEXT_PUBLIC_AEGIS_REPO_URL ?? "https://github.com/princerm06/aegis";
@@ -15,7 +16,7 @@ const PRINCIPLES = [
 
 export function About() {
   return (
-    <Section id="about">
+    <Section id="about" seed={5}>
       <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         <SectionHeading
           index="06"
@@ -23,13 +24,13 @@ export function About() {
           title="Built at HackPrinceton Fall 2026."
           lede="AEGIS is a hackathon prototype exploring how practical and physical AI can support — not replace — emergency incident commanders. It connects computer vision, spatial mapping, optimization, and responder hardware into one auditable loop."
         />
-        <ul className="grid gap-px overflow-hidden rounded-[4px] border border-line bg-line sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {PRINCIPLES.map((p) => (
-            <li key={p.title} className="bg-panel p-6">
-              <p.icon size={18} className="text-accent" aria-hidden="true" />
+            <MotionCard as="li" key={p.title} className="lp-card p-6">
+              <p.icon size={18} className="lp-icon text-accent" aria-hidden="true" />
               <h3 className="mt-4 text-[16px] font-medium text-text">{p.title}</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-muted">{p.body}</p>
-            </li>
+            </MotionCard>
           ))}
         </ul>
       </div>
@@ -42,9 +43,10 @@ export function FinalCta() {
     <section className="relative isolate overflow-hidden border-t border-line/70 py-28">
       <div className="lp-grid lp-grid-fade absolute inset-0 -z-10" aria-hidden="true" />
       <div
-        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_60%_at_50%_100%,rgba(56,208,220,0.12),transparent_70%)]"
+        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_60%_at_50%_100%,var(--accent-glow),transparent_70%)]"
         aria-hidden="true"
       />
+      <SectionTransition leave={false}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           align="center"
@@ -55,18 +57,19 @@ export function FinalCta() {
         <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
             href="/command"
-            className="inline-flex items-center justify-center gap-2 rounded-[3px] bg-accent px-6 py-3 text-[14.5px] font-medium text-bg transition hover:bg-[#5fdde6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="inline-flex items-center justify-center gap-2 lp-press rounded-[3px] bg-accent px-6 py-3 text-[14.5px] font-medium text-on-accent hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Launch Command Center <ArrowRight size={16} aria-hidden="true" />
           </Link>
           <a
             href="#technology"
-            className="inline-flex items-center justify-center gap-2 rounded-[3px] border border-line-strong px-6 py-3 text-[14.5px] text-text transition hover:border-accent/60 hover:bg-accent/5"
+            className="inline-flex items-center justify-center gap-2 lp-press rounded-[3px] border border-line-strong px-6 py-3 text-[14.5px] text-text hover:border-accent/60 hover:bg-accent/5"
           >
             Explore the Technology
           </a>
         </div>
       </div>
+      </SectionTransition>
     </section>
   );
 }

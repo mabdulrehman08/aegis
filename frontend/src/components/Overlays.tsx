@@ -5,10 +5,10 @@ import type { Alert } from "@/lib/useAlerts";
 import type { PreviewFlags } from "@/lib/preview";
 
 const LEVEL: Record<Alert["level"], string> = {
-  info: "border-info/60 bg-[#0b1626]",
-  ok: "border-ok/60 bg-[#0a1a10]",
-  warn: "border-warn/70 bg-[#1f1606]",
-  danger: "border-danger bg-[#260b0b]",
+  info: "border-info/60 bg-tone-info",
+  ok: "border-ok/60 bg-tone-ok",
+  warn: "border-warn/70 bg-tone-warn",
+  danger: "border-danger bg-tone-danger",
 };
 const ICON: Record<Alert["level"], string> = { info: "ℹ", ok: "✓", warn: "!", danger: "⚠" };
 

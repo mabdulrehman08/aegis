@@ -118,15 +118,15 @@ export function LoopStrip({
       {steps.map((s, i) => (
         <li
           key={s.key}
-          className={`relative flex flex-col gap-0.5 px-3 py-2 ${s.phase === "active" ? "bg-[#1a1407]" : "bg-panel"}`}
+          className={`relative flex flex-col gap-0.5 px-3 py-2 ${s.phase === "active" ? "bg-tone-warn" : "bg-panel"}`}
         >
           <div className="flex items-center gap-1.5">
             <span
               className={`mono flex h-4 w-4 items-center justify-center rounded-sm text-[9px] font-bold ${
                 s.phase === "done"
-                  ? "bg-accent text-[#04181a]"
+                  ? "bg-accent text-on-accent"
                   : s.phase === "active"
-                    ? "blink bg-warn text-[#1c1100]"
+                    ? "blink bg-warn text-on-warn"
                     : "border border-line-strong text-faint"
               }`}
             >

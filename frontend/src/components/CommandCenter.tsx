@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ThemeToggle } from "@/components/theme";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { fallbackState } from "@/lib/fallback";
 import { useFieldNotes } from "@/lib/fieldNotes";
@@ -12,7 +13,9 @@ import { buildReport, download } from "@/lib/report";
 import type { ActionResponse, SceneMap as SceneMapT, SimulationApproval, SimulationProposal } from "@/lib/types";
 import { useAlerts } from "@/lib/useAlerts";
 import { useSimulation, type LinkStatus } from "@/lib/useSimulation";
-import { CamGrid } from "./CamGrid";
+import { CameraView, cameraFeeds } from "./CamGrid";
+import { FeedFrame, useFeedOrder, useSlotRects } from "./FeedStage";
+import { FEED_STATUS_LABEL, MAP_FEED_ID, type FeedStatus } from "@/lib/feeds";
 import { CommandDock } from "./CommandDock";
 import { CommsPanel } from "./CommsPanel";
 import { LoopStrip } from "./LoopStrip";
@@ -156,6 +159,19 @@ export function CommandCenter() {
   );
   const replan = () => void act("Replan", () => api.replan(actor));
 
+  // Feed swapping: map + cameras share one primary viewport and a secondary grid.
+  const camFeeds = useMemo(() => cameraFeeds(state, fighters), [state, fighters]);
+  const feedIds = useMemo(() => [MAP_FEED_ID, ...camFeeds.map((f) => f.id)], [camFeeds]);
+  const { order, primaryId, swapFeed, moving } = useFeedOrder(feedIds);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { slotRefs, rects } = useSlotRects(stageRef, feedIds.length, !!state);
+  const [camStatus, setCamStatus] = useState<Record<string, FeedStatus>>({});
+  const onCamStatus = useCallback((id: string, s: FeedStatus) => setCamStatus((p) => (p[id] === s ? p : { ...p, [id]: s })), []);
+  // Map tools need the map on screen: bring it back to the primary viewport when they're switched on.
+  useEffect(() => {
+    if ((placing || editMap) && primaryId !== MAP_FEED_ID) swapFeed(MAP_FEED_ID);
+  }, [placing, editMap, primaryId, swapFeed]);
+
   // Keyboard shortcuts (ignored while typing). Space is handled by push-to-talk.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -191,9 +207,20 @@ export function CommandCenter() {
     return () => window.removeEventListener("keydown", onKey);
   }, [proposal, state, pending, fighters, decide, dispatch]);
 
+  const expand = (id: string) => {
+    if (id !== MAP_FEED_ID) {
+      setPlacing(false);
+      setEditMap(false);
+    }
+    swapFeed(id);
+    const rid = camFeeds.find((f) => f.id === id)?.responderId;
+    if (rid) select(rid);
+  };
+
   if (!state) {
     return (
-      <main className="flex h-screen flex-col items-center justify-center gap-3 text-center">
+      <main className="relative flex h-screen flex-col items-center justify-center gap-3 text-center">
+        <ThemeToggle className="absolute right-3 top-3" />
         <Logo />
         <p className="text-sm text-muted">{link === "offline" ? "Cannot reach the AEGIS backend." : "Connecting to backend…"}</p>
         {link === "offline" && (
@@ -208,6 +235,82 @@ export function CommandCenter() {
     );
   }
 
+  const mapStatus: { status: FeedStatus; label: string; color: string } = fallback
+    ? { status: "connected", label: "SEEDED FALLBACK · NOT LIVE", color: "var(--warn)" }
+    : {
+        status: link === "live" || link === "polling" ? "connected" : link === "connecting" ? "connecting" : "disconnected",
+        label: LINK[link].label.toUpperCase(),
+        color: LINK[link].color,
+      };
+  const feedName = (id: string) => (id === MAP_FEED_ID ? "SCENE MAP" : camFeeds.find((f) => f.id === id)?.name ?? id);
+  const feedStatusText = (id: string) => (id === MAP_FEED_ID ? mapStatus.label : FEED_STATUS_LABEL[camStatus[id] ?? "disconnected"].short);
+  const mapView = (primary: boolean) => (
+          <section className="panel relative flex h-full min-h-0 flex-col" aria-label="Scene map">
+            <div className="flex items-center gap-2 border-b border-line px-2.5 py-1">
+              <h2 className="label !text-text">Scene map</h2>
+              <span className="mono shrink-0 text-[9.5px] font-semibold tracking-[0.12em]" style={{ color: mapStatus.color }} data-feed-status={mapStatus.status}>
+                {mapStatus.label}
+              </span>
+              {primary && (
+                <span className="mono truncate text-[10.5px] text-muted">
+                  {state.scenario.casualties.length} victims · {fighters.length} firefighters · {state.scenario.frame_id}
+                </span>
+              )}
+              <div className={`ml-auto flex shrink-0 items-center gap-2 ${primary ? "" : "hidden"}`}>
+                {pending && <span className="mono blink text-[10.5px] text-accent">{pending}…</span>}
+                <Button
+                  size="sm"
+                  variant={placing ? "warn" : "ghost"}
+                  disabled={busy || !activeFighter}
+                  onClick={() => {
+                    setPlacing((v) => !v);
+                    setEditMap(false);
+                  }}
+                  title="Shortcut: M"
+                >
+                  {placing ? "Click map…" : `Mark ${responderName(state, activeFighter ?? "")}`}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editMap ? "warn" : "ghost"}
+                  disabled={busy || !state.scenario.scene_map?.occupancy_grid}
+                  onClick={() => {
+                    setEditMap((v) => !v);
+                    setPlacing(false);
+                  }}
+                  title="Shortcut: B"
+                >
+                  {editMap ? "Done" : "Block route"}
+                </Button>
+              </div>
+            </div>
+            {primary && (editMap || placing) && (
+              <div className="sim-stripe border-b border-warn/30 px-3 py-0.5 text-[11px] text-warn">
+                {placing
+                  ? `Click where ${responderName(state, activeFighter ?? "")} is, as seen on the bodycam. Esc to cancel.`
+                  : "Click cells to toggle blocked / free. Each change publishes a new map revision and triggers replanning."}
+              </div>
+            )}
+            <div className={`min-h-0 flex-1 ${primary ? "px-1.5 pb-8 pt-1.5" : "pointer-events-none p-1"}`}>
+              <SceneMap
+                state={state}
+                proposal={proposal}
+                selectedId={selected}
+                onSelect={select}
+                editMode={editMap}
+                onToggleCell={toggleCell}
+                now={now}
+                onPlace={placing ? place : null}
+                focusResponderId={activeFighter}
+                ghostRoutes={diff?.ghostRoutes}
+                floorPlan={floorPlan}
+                flashing={flashing}
+              />
+            </div>
+            {primary && <MapLegend ghost={!!diff?.ghostRoutes.length} />}
+          </section>
+  );
+
   return (
     <main className="flex h-screen min-h-[640px] flex-col gap-1.5 overflow-hidden p-1.5">
       <header className="flex items-center gap-3 rounded-md border border-line bg-panel px-2.5 py-1">
@@ -215,6 +318,7 @@ export function CommandCenter() {
         <div className="min-w-0 flex-1">
           <LoopStrip state={state} proposal={proposal} events={fallback ? [] : events} compact />
         </div>
+        <ThemeToggle compact className="shrink-0" />
         <div className="sim-stripe mono shrink-0 rounded border border-warn/60 px-2 py-0.5 text-[10.5px] font-bold tracking-[0.16em] text-warn">SIMULATION</div>
         <button onClick={toggleMute} className="shrink-0 text-[13px]" title={muted ? "Alert sounds off" : "Alert sounds on"} aria-label="Toggle alert sound">
           {muted ? "🔕" : "🔔"}
@@ -263,72 +367,18 @@ export function CommandCenter() {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,68fr)_minmax(0,32fr)] grid-rows-[minmax(0,1fr)_clamp(168px,24vh,224px)] gap-1.5">
-        {/* map — top left, largest */}
-        <section className="panel relative flex min-h-0 flex-col">
-          <div className="flex items-center gap-2 border-b border-line px-2.5 py-1">
-            <h2 className="label !text-text">Scene map</h2>
-            <span className="mono text-[10.5px] text-muted">
-              {state.scenario.casualties.length} victims · {fighters.length} firefighters · {state.scenario.frame_id}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              {pending && <span className="mono blink text-[10.5px] text-accent">{pending}…</span>}
-              <Button
-                size="sm"
-                variant={placing ? "warn" : "ghost"}
-                disabled={busy || !activeFighter}
-                onClick={() => {
-                  setPlacing((v) => !v);
-                  setEditMap(false);
-                }}
-                title="Shortcut: M"
-              >
-                {placing ? "Click map…" : `Mark ${responderName(state, activeFighter ?? "")}`}
-              </Button>
-              <Button
-                size="sm"
-                variant={editMap ? "warn" : "ghost"}
-                disabled={busy || !state.scenario.scene_map?.occupancy_grid}
-                onClick={() => {
-                  setEditMap((v) => !v);
-                  setPlacing(false);
-                }}
-                title="Shortcut: B"
-              >
-                {editMap ? "Done" : "Block route"}
-              </Button>
-            </div>
-          </div>
-          {(editMap || placing) && (
-            <div className="sim-stripe border-b border-warn/30 px-3 py-0.5 text-[11px] text-warn">
-              {placing
-                ? `Click where ${responderName(state, activeFighter ?? "")} is, as seen on the bodycam. Esc to cancel.`
-                : "Click cells to toggle blocked / free. Each change publishes a new map revision and triggers replanning."}
-            </div>
-          )}
-          <div className="min-h-0 flex-1 px-1.5 pb-8 pt-1.5">
-            <SceneMap
-              state={state}
-              proposal={proposal}
-              selectedId={selected}
-              onSelect={select}
-              editMode={editMap}
-              onToggleCell={toggleCell}
-              now={now}
-              onPlace={placing ? place : null}
-              focusResponderId={activeFighter}
-              ghostRoutes={diff?.ghostRoutes}
-              floorPlan={floorPlan}
-              flashing={flashing}
-            />
-          </div>
-          <MapLegend ghost={!!diff?.ghostRoutes.length} />
-        </section>
+      <div ref={stageRef} className="relative grid min-h-0 flex-1 grid-cols-[minmax(0,68fr)_minmax(0,32fr)] grid-rows-[minmax(0,1fr)_clamp(168px,24vh,224px)] gap-1.5">
+        {/* primary viewport slot — top left, largest (the active feed is positioned over it) */}
+        <div ref={slotRefs[0]} className="min-h-0" />
 
-        {/* right — bodycam grid + comms */}
+        {/* right — secondary feed grid + comms */}
         <div className="row-span-1 flex min-h-0 flex-col gap-1.5">
           <div className="panel p-1.5">
-            <CamGrid state={state} proposal={proposal} activeId={activeFighter} onActive={(id) => select(id)} flashing={flashing} now={now} />
+            <div className="grid grid-cols-2 gap-1.5">
+              {order.slice(1).map((_, i) => (
+                <div key={i} ref={slotRefs[i + 1]} className="aspect-video w-full" />
+              ))}
+            </div>
           </div>
           <CommsPanel
             state={state}
@@ -373,6 +423,29 @@ export function CommandCenter() {
           onReplan={replan}
           onOpenDetails={() => setDrawer(true)}
         />
+
+        {/* Feed layer: every feed stays mounted in a fixed DOM order; a swap only moves it over another slot. */}
+        {feedIds.map((id) => {
+          const slot = order.indexOf(id);
+          const primary = slot === 0;
+          const cam = camFeeds.find((f) => f.id === id);
+          const rid = cam?.responderId;
+          return (
+            <FeedFrame
+              key={id}
+              id={id}
+              name={feedName(id)}
+              statusText={feedStatusText(id)}
+              rect={rects[slot]}
+              primary={primary}
+              moving={moving.includes(id)}
+              onExpand={expand}
+              className={`${!primary && rid && rid === activeFighter ? "ring-2 ring-accent" : ""} ${rid && flashing.has(rid) ? "flash" : ""}`}
+            >
+              {cam ? <CameraView feed={cam} state={state} proposal={proposal} now={now} primary={primary} onStatus={onCamStatus} /> : mapView(primary)}
+            </FeedFrame>
+          );
+        })}
       </div>
 
       {drawer && (
@@ -404,7 +477,7 @@ export function CommandCenter() {
             key={t.id}
             role="status"
             className={`pointer-events-auto rounded border px-3 py-2 text-xs shadow-lg ${
-              t.kind === "error" ? "border-danger/60 bg-[#1d0b0b] text-[#fecaca]" : "border-line-strong bg-panel-2 text-text"
+              t.kind === "error" ? "border-danger/60 bg-tone-danger text-danger-text" : "border-line-strong bg-panel-2 text-text"
             }`}
           >
             {t.text}

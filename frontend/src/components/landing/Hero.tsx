@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { BackendStatus } from "./BackendStatus";
-import { HeroScene } from "./HeroScene";
+import { InteractiveHeroScene } from "./InteractiveHeroScene";
+import { SectionTransition } from "./motion";
 
 export function Hero() {
   return (
     <section id="top" className="relative isolate overflow-hidden pt-16">
       <div className="lp-grid lp-grid-fade absolute inset-0 -z-10" aria-hidden="true" />
       <div
-        className="absolute inset-x-0 top-0 -z-10 h-[620px] bg-[radial-gradient(ellipse_60%_50%_at_70%_20%,rgba(56,208,220,0.10),transparent_70%)]"
+        className="absolute inset-x-0 top-0 -z-10 h-[620px] bg-[radial-gradient(ellipse_60%_50%_at_70%_20%,var(--accent-glow),transparent_70%)]"
         aria-hidden="true"
       />
 
+      <SectionTransition enter={false}>
       <div className="mx-auto grid min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-14 lg:px-8 lg:py-20">
         <div>
           <p className="lp-eyebrow">AI-powered emergency coordination</p>
@@ -26,13 +28,13 @@ export function Hero() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/command"
-              className="inline-flex items-center justify-center gap-2 rounded-[3px] bg-accent px-5 py-3 text-[14.5px] font-medium text-bg transition hover:bg-[#5fdde6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex items-center justify-center gap-2 lp-press rounded-[3px] bg-accent px-5 py-3 text-[14.5px] font-medium text-on-accent hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Explore Command Center <ArrowRight size={16} aria-hidden="true" />
             </Link>
             <a
               href="#how-it-works"
-              className="inline-flex items-center justify-center gap-2 rounded-[3px] border border-line-strong px-5 py-3 text-[14.5px] text-text transition hover:border-accent/60 hover:bg-accent/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex items-center justify-center gap-2 lp-press rounded-[3px] border border-line-strong px-5 py-3 text-[14.5px] text-text hover:border-accent/60 hover:bg-accent/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               See How It Works
             </a>
@@ -47,8 +49,9 @@ export function Hero() {
           </div>
         </div>
 
-        <HeroScene />
+        <InteractiveHeroScene />
       </div>
+      </SectionTransition>
     </section>
   );
 }

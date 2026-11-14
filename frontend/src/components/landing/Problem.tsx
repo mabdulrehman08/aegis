@@ -1,5 +1,6 @@
 import { Layers, Scale, Timer } from "lucide-react";
 import { Section, SectionHeading } from "./Section";
+import { MotionCard } from "./motion";
 
 const PROBLEMS = [
   {
@@ -68,7 +69,7 @@ const PROBLEMS = [
 
 export function Problem() {
   return (
-    <Section id="platform">
+    <Section id="platform" seed={1}>
       <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         <SectionHeading
           index="01"
@@ -76,19 +77,19 @@ export function Problem() {
           title="In an emergency, information is not enough."
           lede="Most monitoring systems stop at detection and visualization. The hard part is turning what is seen into who goes where — and knowing the task actually reached them."
         />
-        <ol className="grid gap-px overflow-hidden rounded-[4px] border border-line bg-line">
+        <ol className="grid gap-3">
           {PROBLEMS.map((p) => (
-            <li key={p.n} className="grid gap-5 bg-panel p-6 sm:grid-cols-[minmax(0,1fr)_200px] sm:items-center sm:p-7">
+            <MotionCard as="li" key={p.n} className="lp-card grid gap-5 p-6 sm:grid-cols-[minmax(0,1fr)_200px] sm:items-center sm:p-7">
               <div>
                 <div className="flex items-center gap-3">
                   <span className="mono text-[12px] text-danger/80">{p.n}</span>
-                  <p.icon size={16} className="text-muted" aria-hidden="true" />
+                  <p.icon size={16} className="lp-icon text-muted" aria-hidden="true" />
                 </div>
                 <h3 className="mt-3 text-[19px] font-medium tracking-[-0.01em] text-text">{p.title}</h3>
                 <p className="mt-2 text-[14.5px] leading-relaxed text-muted">{p.body}</p>
               </div>
               <div className="hidden rounded-[3px] border border-line bg-bg/60 px-2 py-1 sm:block">{p.visual}</div>
-            </li>
+            </MotionCard>
           ))}
         </ol>
       </div>

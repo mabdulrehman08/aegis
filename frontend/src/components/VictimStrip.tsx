@@ -120,7 +120,7 @@ function PriorityBadge({ c }: { c: Casualty }) {
   ) : (
     <span
       className="mono rounded px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider"
-      style={{ background: m.color, color: sev === "deceased" ? "#cbd5e1" : "#05080b" }}
+      style={{ background: m.color, color: sev === "deceased" ? "var(--on-sev-deceased)" : "var(--on-sev)" }}
     >
       {m.label}
     </span>
@@ -270,7 +270,7 @@ function Editor({
               style={{
                 borderColor: m.color,
                 background: active ? m.color : "transparent",
-                color: active ? (s === "deceased" ? "#cbd5e1" : "#05080b") : m.color,
+                color: active ? (s === "deceased" ? "var(--on-sev-deceased)" : "var(--on-sev)") : m.color,
                 opacity: busy && !active ? 0.5 : 1,
               }}
             >

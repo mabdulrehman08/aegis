@@ -34,9 +34,9 @@ export function Badge({ tone = "neutral", children, className = "" }: { tone?: T
 type Variant = "primary" | "ghost" | "danger" | "ok" | "warn";
 
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-accent text-[#04181a] hover:brightness-110 border-accent",
-  ok: "bg-ok text-[#03170b] hover:brightness-110 border-ok",
-  warn: "bg-warn text-[#1c1100] hover:brightness-110 border-warn",
+  primary: "bg-accent text-on-accent hover:brightness-110 border-accent",
+  ok: "bg-ok text-on-ok hover:brightness-110 border-ok",
+  warn: "bg-warn text-on-warn hover:brightness-110 border-warn",
   danger: "bg-transparent text-danger border-danger/60 hover:bg-danger/10",
   ghost: "bg-transparent text-text border-line-strong hover:border-muted hover:bg-panel-2",
 };
