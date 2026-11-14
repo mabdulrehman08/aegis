@@ -61,6 +61,7 @@ def test_openapi_exposes_only_foundation_routes(client):
     "/api/v1/dispatch-proposals",
     "/api/v1/dispatch-proposals/proposal-001/approval",
     "/api/v1/dispatches",
+    "/api/v1/device-events",
 ])
 def test_reserved_write_endpoints_are_unavailable(client, path):
     assert client.post(path, json={}).status_code == 404

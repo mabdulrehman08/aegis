@@ -24,6 +24,12 @@ There is no WebSocket server or dispatch execution in this foundation.
   All positions in a scenario must match its frame. Calibration/transforms are
   future CV/mapping work; do not combine unrelated frames.
 - No real patient data, imagery, credentials, or device addresses in shared mocks.
+- The alignment extensions below are optional on existing payloads: omitted
+  `Responder.capabilities` means `[]`, omitted `CVObservation.track` and
+  `Scenario.scene_map` mean `null`. Existing v1.0 fixtures remain valid and the
+  demo response omits these fields when absent from its source fixture. Older
+  strict consumers must adopt these schemas before producers send new fields;
+  additive fields are not automatically compatible with `extra="forbid"`.
 
 ## Shared entity schemas
 
@@ -67,6 +73,11 @@ alone. There is no assessment-write endpoint in this foundation.
 | `display_name` | string | Display label; synthetic in fixtures |
 | `position` | Position | Shared-frame location |
 | `status` | `available` / `busy` / `offline` | Availability, not dispatch authorization |
+| `capabilities` | [string], optional; default `[]` | Declared skills/equipment tags, e.g. `first_aid`, `aed`, `stretcher` |
+
+Tags are team-agreed identifiers, not inferred qualifications. An empty list means
+no declared capabilities, not universal capability. A future solver must check
+required capabilities explicitly; tags never authorize clinical decisions.
 
 ### CVObservation
 
@@ -78,6 +89,25 @@ alone. There is no assessment-write endpoint in this foundation.
 | `position` | Position | Mapped person location |
 | `kind` | `person_detected` | Detection only |
 | `confidence` | number in [0, 1] | Detector confidence, never clinical certainty |
+| `track` | CVTrack or null, optional; default null | Persistent tracker association, absent for legacy one-off detections |
+
+### CVTrack
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `track_id` | string | Stable, scenario-scoped tracker identity across observation updates |
+| `state` | `visible` / `occluded` / `lost` | Currently detected / temporarily obscured / no longer tracked |
+| `first_seen_at` | timestamp | First actual visual detection for this track |
+| `last_seen_at` | timestamp | Most recent actual visual detection, not last heartbeat |
+
+Each update has a new observation `id`; `track_id` persists across updates, not
+across unrelated tracker sessions. Prefix track IDs with a tracker session ID and
+never reuse retired IDs. Re-identification after a restart is future work.
+`first_seen_at <= last_seen_at <= observed_at`; `observed_at` is the update time
+for occlusion/loss reports. `position` and `confidence` in such reports retain
+the last actual detection's values, not a new detection or predicted location.
+Do not advance `last_seen_at` while occluded/lost. Loss timeouts are future tracker
+configuration; a lost track is not evidence of death or medical deterioration.
 
 CVObservation has **no severity, triage, injury, medical assessment, or priority
 field**. It does not create a medical assessment. Backend association of a detection
@@ -95,6 +125,38 @@ with a casualty is future work; observation IDs are not automatically casualty I
 | `created_at` | timestamp | Fixture creation time |
 | `casualties` | [Casualty] | Scene casualties |
 | `responders` | [Responder] | Scene responders |
+| `scene_map` | SceneMap or null, optional; default null | No map supplied when null, not an obstacle-free scene |
+
+### SceneMap, obstacles, and occupancy grid — reserved data schemas
+
+| Schema | Required fields |
+| --- | --- |
+| SceneMap | `frame_id: string`, `revision: string`, `obstacles: [Obstacle]`, `occupancy_grid: OccupancyGrid or null` |
+| Obstacle | `id: string`, `vertices: [Position]` (at least 3 polygon vertices) |
+| OccupancyGrid | `origin: Position`, `resolution_m: number > 0`, `width: integer > 0`, `height: integer > 0`, `cells: [integer]` |
+| AStarRoute | `algorithm: astar`, `map_revision: string`, `waypoints: [Position]` (at least 2), `distance_m: number >= 0` |
+
+Obstacle IDs are unique within a map; polygons are implicitly closed. Vertices
+and grid origin must use `SceneMap.frame_id`, which must match the scenario.
+`revision` changes whenever geometry or occupancy changes. Polygon simplicity and
+collision checking are future mapping work, not guarantees of schema validation.
+
+Grid origin is the lower-left corner of cell (0,0), axes match the map, and cells
+are flattened row-major: `index = row * width + column`, rows advance in +y.
+Exactly `width * height` cells are required, each `-1` (unknown), `0` (free), or
+`100` (occupied); these are discrete values, not probabilities. Cell centers map
+to `(origin.x_m + (column + 0.5) * resolution_m,
+origin.y_m + (row + 0.5) * resolution_m)`. Null grid means unavailable occupancy.
+Unknown cells and out-of-bounds locations are non-traversable by default.
+
+Routes contain **world-meter Position waypoints**, not grid indices, ordered from
+responder to casualty in a single frame. `distance_m` is the polyline length.
+`map_revision` binds the route to the map used for planning. Before execution,
+future routing must check endpoints, current map revision, obstacles, grid cells,
+and responder clearance; a validated payload is not a verified safe route.
+An omitted/null assignment route means not supplied, not verified reachable. If
+planning finds a casualty unreachable, exclude its assignment and report it as
+unassigned; never return an empty route as success. No A* implementation is included.
 
 Executable validation for these schemas lives in `backend/app/models.py`.
 The shared example is `shared/mock/scenario.demo.json`: three casualties, two
@@ -122,9 +184,9 @@ idempotency, and an append-only audit trail.
 
 | Schema | Required fields |
 | --- | --- |
-| Assignment | `casualty_id: string`, `responder_id: string` |
+| Assignment | `casualty_id: string`, `responder_id: string`; optional `route: AStarRoute or null` (default null) |
 | ProposalRequest | `scenario_id: string` |
-| DispatchProposal | `id: string`, `scenario_id: string`, `revision: integer >= 1`, `status: pending_approval / approved / rejected / expired`, `assignments: [Assignment]`, `created_at: timestamp`, `expires_at: timestamp` |
+| DispatchProposal | `id: string`, `scenario_id: string`, `revision: integer >= 1`, `status: pending_approval / approved / rejected / expired`, `assignments: [Assignment]`, `created_at: timestamp`, `expires_at: timestamp`; optional `recommendation: RecommendationMetadata or null` (default null) |
 | ApprovalRequest | `proposal_revision: integer >= 1`, `decision: approve / reject` |
 | ApprovalRecord | `id: string`, `proposal_id: string`, `proposal_revision: integer >= 1`, `decision: approve / reject`, `approved_by: string`, `decided_at: timestamp` |
 | DispatchRequest | `proposal_id: string`, `proposal_revision: integer >= 1`, `approval_id: string` |
@@ -136,6 +198,25 @@ assignments must reference existing entities in that scenario, use available
 responders, and contain no duplicate casualty or responder IDs. The backend
 revalidates current state, revision, and expiry at approval and at dispatch.
 
+### RecommendationMetadata — reserved
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `solver_name` | string | Solver identifier |
+| `solver_version` | string | Reproducible algorithm/configuration version |
+| `generated_at` | timestamp | Recommendation calculation time |
+| `objective` | string | Team-agreed objective identifier, e.g. `minimize_total_distance` |
+| `status` | `feasible` / `partial` / `infeasible` | All / some / no casualties assigned under the current constraints |
+| `unassigned_casualty_ids` | [string] | Explicit omissions, empty only when all assigned |
+| `objective_value` | number or null, optional; default null | Value in objective-defined units; null if not computed |
+
+Metadata explains a recommendation; it is neither a medical assessment nor an
+approval. The future backend must check consistency with scenario entities,
+capabilities, assignments, and routes. A score cannot substitute for human review.
+`Assignment`, `DispatchProposal`, and the new map/tracking/metadata/device payloads
+have standalone validation models in `backend/app/models.py`; those models do
+not implement solver logic, authorization, or cross-record state transitions.
+
 ### Reserved REST endpoints
 
 | Method | Path | Request | Success |
@@ -145,6 +226,7 @@ revalidates current state, revision, and expiry at approval and at dispatch.
 | POST | `/api/v1/dispatch-proposals` | ProposalRequest | 201, pending DispatchProposal |
 | POST | `/api/v1/dispatch-proposals/{proposal_id}/approval` | ApprovalRequest | 201, ApprovalRecord |
 | POST | `/api/v1/dispatches` | DispatchRequest | 201, DispatchRecord |
+| POST | `/api/v1/device-events` | DeviceAssignmentEvent | 201, accepted DeviceAssignmentEvent |
 
 Future ingest calls are scoped to an authenticated scenario/device; foreign
 frames or IDs are rejected. For every POST, require an `Idempotency-Key` header:
@@ -167,6 +249,47 @@ use an array for `detail`): 401 unauthenticated, 403 unauthorized, 404 unknown I
 
 Editing assignments requires a new revision and fresh approval. Until these
 gates exist and are tested, **do not add a working dispatch path**.
+
+### DeviceAssignmentEvent — reserved
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Unique event ID for deduplication |
+| `scenario_id` | string | Scenario scope |
+| `device_id` | string | Authenticated device identity; must match credentials |
+| `dispatch_id` | string | Existing human-approved dispatch |
+| `command_id` | string | Stable command ID for one assignment delivery/retry |
+| `casualty_id` | string | Assignment target |
+| `responder_id` | string | Assigned responder |
+| `kind` | `delivered` / `acknowledged` / `completed` | Device receipt / explicit responder acknowledgement / explicit reported completion |
+| `occurred_at` | timestamp | Device event time, not server receipt time |
+| `mode` | `simulation` / `real` | Required; no implicit real-device mode |
+
+`delivered` means the device received the assignment, not that a person accepted
+it. `acknowledged` means the assigned responder explicitly acknowledged it, not
+that an operator approved dispatch. `completed` means the responder reports the
+assignment complete, not that treatment succeeded or a medical condition changed.
+These are inbound reports after authorization, never dispatch/approval commands.
+
+Future ingest must authenticate the device, correlate all IDs with the approved
+dispatch/assignment, deduplicate event IDs and command retries, and audit receipt
+time separately. Out-of-order reports must not regress state or imply earlier
+milestones; missing delivery/acknowledgement remains unknown. Identity checks and
+state transitions are not implemented by the standalone validation model.
+
+### Simulated local demo controls versus real dispatch
+
+The current demo is read-only: **no simulated control or device transport exists**.
+Future local buttons for assignment, acknowledgement, or completion must be
+visibly labelled **SIMULATION**, use synthetic scenarios and `mode: simulation`,
+and change local mock state only. A simulated approval is not a real approval.
+Simulation IDs, events, and controls must never reach real devices or satisfy a
+real dispatch gate. The real backend must derive allowed mode from trusted
+environment/device identity, not trust a client-supplied `mode` value.
+
+A future real system requires authenticated human approval, durable auditing,
+atomic/idempotent dispatch, authenticated device transport, and delivery/retry
+handling. A UI control or device acknowledgement cannot bypass those requirements.
 
 ## WebSocket — reserved, server-to-client only
 
@@ -200,6 +323,13 @@ match the event table:
 | `dispatch.proposed` | DispatchProposal | Advisory pending proposal only |
 | `dispatch.decided` | ApprovalRecord | Human approval or rejection recorded |
 | `dispatch.created` | DispatchRecord | Approved dispatch durably created, not device delivery confirmation |
+| `device.assignment_delivered` | DeviceAssignmentEvent with `kind: delivered` | Device receipt only |
+| `device.assignment_acknowledged` | DeviceAssignmentEvent with `kind: acknowledged` | Responder acknowledgement only |
+| `device.assignment_completed` | DeviceAssignmentEvent with `kind: completed` | Reported assignment completion only |
+
+Device event `scenario_id` must match the envelope; its envelope event ID/sequence
+are backend-issued, while payload `id` deduplicates the originating device report.
+Event type must agree with payload `kind`. These checks belong to future ingest.
 
 Delivery is at-least-once; clients deduplicate `event_id`. On reconnect or a
 sequence gap, obtain a fresh snapshot before applying further updates. A future
