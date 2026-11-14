@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 
 Identifier = Annotated[str, Field(min_length=1)]
@@ -110,6 +110,13 @@ class CameraSigns(ContractModel):
     breathing: BreathingMotionSign | None = None
     visible_blood: VisibleColorSign | None = None
     camera_motion: CameraMotion | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_wire_schema(self, handler):
+        # Preserve the CV producer's external "schema" key in nested snapshots/events.
+        values = handler(self)
+        values["schema"] = values.pop("schema_version")
+        return values
 
     @model_validator(mode="after")
     def validate_observed_measurements(self) -> "CameraSigns":
