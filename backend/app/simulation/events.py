@@ -10,6 +10,7 @@ EVENT_TYPES = frozenset({
     "simulation.reset",
     "simulation.snapshot",
     "simulation.observation_received",
+    "simulation.camera_registered",
     "simulation.track_associated",
     "simulation.casualty_created",
     "simulation.assessment_recorded",

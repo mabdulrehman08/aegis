@@ -66,7 +66,6 @@ def test_full_lifecycle_and_event_order(client, clock):
     after = created["state"]
     busy = {r["id"]: r["status"] for r in after["scenario"]["responders"]}
     assert busy == {"responder-001": "busy", "responder-002": "busy"}
-    # Active work is never re-proposed; nobody is free for casualty-003.
     assert after["current_proposal_id"] is None
     assert after["last_recommendation"]["proposal_id"] is None
 
@@ -104,7 +103,7 @@ def test_decision_validation_and_exact_revision(client):
     prop = current(reset(client))
     url = f"{BASE}/proposals/{prop['id']}/decision"
     body = {"proposal_revision": prop["revision"], "decision": "approve", "actor": "operator-1"}
-    assert client.post(url, json=body).status_code == 422  # Idempotency-Key required
+    assert client.post(url, json=body).status_code == 422
     for bad in ({**body, "mode": "real"}, {**body, "approved_by": "x"},
                 {k: v for k, v in body.items() if k != "actor"}):
         assert client.post(url, json=bad, headers={"Idempotency-Key": "a"}).status_code == 422
@@ -115,8 +114,8 @@ def test_decision_validation_and_exact_revision(client):
     assert record["operator_id"] == "operator-1" and record["authenticated"] is False
     replay = decide(client, prop, "k1")
     assert replay.json()["duplicate"] is True and replay.json()["result"]["id"] == record["id"]
-    assert decide(client, prop, "k2").status_code == 409  # already decided
-    assert decide(client, prop, "k1", decision="reject").status_code == 409  # key reuse
+    assert decide(client, prop, "k2").status_code == 409
+    assert decide(client, prop, "k1", decision="reject").status_code == 409
 
 
 def test_dispatch_consumes_approval_exactly_once(client):
@@ -286,7 +285,6 @@ def test_human_assessment_validation_and_replan(client, clock):
     recorded = client.post(url, json=assessment("immediate", clock.iso()))
     assert recorded.status_code == 201
     snapshot = recorded.json()["state"]
-    # Unassessed keeps protected parity; the human "minor" label lowers allocation priority.
     assert {a["casualty_id"] for a in current(snapshot)["assignments"]} == {
         "casualty-002", "casualty-003"}
     assert next(c for c in snapshot["scenario"]["casualties"]
@@ -331,7 +329,7 @@ def test_solver_result_for_stale_revision_is_discarded(clock):
 
     def racing_solver(request):
         calls.append(request.scene_revision)
-        if len(calls) == 2:  # a scene change lands while this solve runs
+        if len(calls) == 2:
             holder["store"].update_responder(
                 "demo", "responder-002",
                 __import__("backend.app.simulation.models", fromlist=["x"])

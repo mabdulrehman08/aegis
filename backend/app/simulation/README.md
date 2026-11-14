@@ -1,8 +1,10 @@
 # Simulation coordination API (SIMULATION ONLY)
 
 Local, in-memory, synthetic. No authentication, no real devices, no real
-dispatch. Every request/response/event carries `mode: "simulation"`; sending
-`mode: "real"` anywhere returns 422. All request bodies forbid unknown fields.
+dispatch. Simulation-specific requests, responses and events carry
+`mode: "simulation"`; reused shared CV/map/assessment inputs retain their original
+schemas without a mode field. Sending `mode: "real"` returns 422. All request
+bodies forbid unknown fields.
 
 Wiring (owned by `backend/app/main.py`):
 
@@ -25,6 +27,8 @@ IDs must be reset with a supplied synthetic `scenario` whose `id` matches.
 | GET | `/events?after_sequence=0&limit=200` | — | 200 EventPage |
 | WS | `/ws` | — | snapshot then events |
 | POST | `/observations` | contract `CVObservation` | 201 |
+| PUT | `/cameras/{camera_id}` | `CameraRegistration` (below) | 200 ActionResponse |
+| POST | `/cameras/{camera_id}/observations` | `CameraObservation` (below) | 201 |
 | POST | `/associations` | `{track_id, casualty_id, create_casualty=false, actor}` | 201 |
 | POST | `/casualties/{casualty_id}/assessment` | contract `MedicalAssessment` (`source: "human"`) | 201 |
 | PUT | `/casualties/{casualty_id}/required-capabilities` | `{capabilities: [str], actor}` | 200 |
@@ -105,12 +109,17 @@ Key `result` shapes:
    explicit replan, and roughly every second while a WebSocket is connected):
    each associated observation is classified like the solver does —
    `observed_at` and `track.last_seen_at` are *future* (age < 0), *fresh*
-   (0 ≤ age ≤ 30 s) or *stale* (age > 30 s). When any classification changes
+   (0 ≤ age ≤ 30 s) or *stale* (age > 30 s) — and every human assessment is
+   *future* (`assessed_at > now`, which the solver ignores, giving unassessed
+   parity) or *effective*. This includes assessments supplied in a reset
+   scenario. When any classification changes
    (e.g. a track goes stale, or a stale track is restored with identical
    values) the scene revision bumps and the system replans. Proposal
-   `expires_at` = min(created + 120 s, next freshness transition), so an
-   approval can never be dispatched against observations that have since gone
-   stale. Stale/uncertain observations block *new* work for that casualty only;
+   `expires_at` = min(created + 120 s, next freshness/assessment transition),
+   so an approval can never be dispatched against observations that have since
+   gone stale or an assessment that has since taken effect. A late automatic
+   solve never replaces an open proposal at the same revision (e.g. one
+   produced by an explicit replan meanwhile). Stale/uncertain observations block *new* work for that casualty only;
    active work is preserved.
 9. Map revisions are a per-epoch registry: re-sending a known revision with
    identical content is allowed (e.g. restoring a prior map); reusing any
@@ -124,12 +133,72 @@ Key `result` shapes:
     deterministic ID `sim-device-event-{assignment_id}-{kind}` and, on retry,
     the originally stored timestamp, so retries replay (`duplicate: true`).
 
+## SIMULATION cameras
+
+Local demo adapters; they never touch the shared contract `/observations`
+schema, which is unchanged (except that IDs starting with `sim-camera:` are
+reserved there → 422).
+
+`PUT /cameras/{camera_id}` — `CameraRegistration`:
+
+```json
+{"mode": "simulation", "actor": "operator-1",
+ "mapping_mode": "calibrated_world" | "predefined_zones",
+ "calibration_ref": "lab-cal-1",                     // required + nonblank for calibrated_world
+ "zones": {"doorway": {"frame_id": "demo-floor-1", "x_m": 10, "y_m": 16}}}  // required nonempty for predefined_zones; forbidden for calibrated_world
+```
+
+`mode` is required. `calibration_ref` is an external/human assertion that a
+world calibration exists; the backend computes nothing. Zone positions must use
+the scene frame (else 422). A registration is immutable for the epoch: an
+identical mapping replays (`duplicate: true`, original `registered_by` kept,
+actor ignored); a different mapping → 409. Reset clears all cameras.
+
+`POST /cameras/{camera_id}/observations` — `CameraObservation`:
+
+```json
+{"mode": "simulation", "id": "o1", "observed_at": "...Z", "confidence": 0.9,
+ "track": {"track_id": "t1", "state": "visible", "first_seen_at": "...Z", "last_seen_at": "...Z"},
+ "position": {"frame_id": "demo-floor-1", "x_m": 10, "y_m": 16}}   // calibrated_world: exactly position
+ // or "zone_id": "doorway"                                        // predefined_zones: exactly zone_id
+```
+
+404 unregistered camera; 422 wrong location kind, unknown zone, non-scene
+(raw camera) frame, `mode` missing/`real`, or any extra field (no severity).
+The report becomes a contract `CVObservation` (`source: cv`,
+`kind: person_detected`) with namespaced IDs
+`sim-camera:{len(camera_id)}:{camera_id}:{local_id}` for both observation and
+track — two cameras' local `t1` stay distinct. Use `result.track_id` from the
+response for `/associations`. No automatic casualty creation, association, or
+cross-camera re-identification. Dedup and occluded/lost retention rules
+apply per namespaced track (a lost zone report must keep the same zone).
+
+Provenance: `state.cameras` lists registrations; each `tracks[]` entry has
+`camera` (null for legacy ingest) =
+`{camera_id, local_observation_id, local_track_id, mapping_mode,
+location_basis: calibrated_world | zone_estimate, zone_id, calibration_ref}`;
+the same object appears in the `result.camera` and in
+`simulation.observation_received` payloads. `zone_estimate` positions are the
+zone's registered reference point, not an observed coordinate.
+Event: `simulation.camera_registered` (payload CameraRecord).
+
+Recommendations carry the same provenance for every associated casualty whose
+track came from a camera, snapshotted when the solve was prepared:
+`SimulationProposal.location_provenance` and
+`RecommendationState.location_provenance` (`{casualty_id: CameraProvenance}`,
+empty for legacy tracks), plus deterministic sentences appended to
+`proposal.rationale` / `last_recommendation.location_rationale` naming the
+scene revision. Zone notes state the location is a zone reference point, not
+a precise observed coordinate; calibrated notes state `calibration_ref` is an
+external assertion the backend neither computes nor verifies. The proposal
+explanation endpoint includes these sentences as facts.
+
 ## Events (`EventEnvelope`)
 
 `{schema_version: "1.0", mode: "simulation", event_id, type, scenario_id,
 occurred_at, sequence, payload}`. `sequence` is per scenario, strictly
 increasing and **never resets** (not even across `/reset`). Types:
-`simulation.reset, simulation.snapshot (WS only, not stored), observation_received,
+`simulation.reset, simulation.snapshot (WS only, not stored), observation_received, camera_registered,
 track_associated, casualty_created, assessment_recorded, responder_updated,
 map_updated, capabilities_updated, replan_requested, recommendation_computed,
 proposal_created, proposal_superseded, proposal_expired, decision_recorded,

@@ -17,6 +17,8 @@ from backend.app.models import CVObservation, MedicalAssessment, SceneMap
 from backend.app.simulation.models import (
     ActionResponse,
     AssociationRequest,
+    CameraObservation,
+    CameraRegistration,
     DecisionRequest,
     DispatchRequest,
     EventPage,
@@ -78,6 +80,24 @@ def observation(request: Request, scenario_id: str, body: CVObservation,
                 idempotency_key: str | None = IdempotencyKey) -> ActionResponse:
     """Detection evidence only: never creates a casualty or an assessment."""
     return _call(request, lambda s: s.ingest_observation(scenario_id, body, idempotency_key))
+
+
+@router.put("/{scenario_id}/cameras/{camera_id}", response_model=ActionResponse)
+def register_camera(request: Request, scenario_id: str, camera_id: str, body: CameraRegistration,
+                    idempotency_key: str | None = IdempotencyKey) -> ActionResponse:
+    """SIMULATION camera mapping; immutable per epoch except identical replay."""
+    return _call(request, lambda s: s.register_camera(scenario_id, camera_id, body,
+                                                      idempotency_key))
+
+
+@router.post("/{scenario_id}/cameras/{camera_id}/observations",
+             response_model=ActionResponse, status_code=201)
+def camera_observation(request: Request, scenario_id: str, camera_id: str,
+                       body: CameraObservation,
+                       idempotency_key: str | None = IdempotencyKey) -> ActionResponse:
+    """Camera-namespaced detection; never associates or re-identifies casualties."""
+    return _call(request, lambda s: s.ingest_camera_observation(scenario_id, camera_id, body,
+                                                                idempotency_key))
 
 
 @router.post("/{scenario_id}/associations", response_model=ActionResponse, status_code=201)
@@ -193,7 +213,7 @@ async def stream(websocket: WebSocket, scenario_id: str) -> None:
             cursor = first.sequence
             idle = 0
             while True:
-                if idle >= WS_TICK_POLLS:  # time-driven freshness/expiry transitions
+                if idle >= WS_TICK_POLLS:
                     idle = 0
                     await anyio.to_thread.run_sync(store.tick, scenario_id)
                 page = await anyio.to_thread.run_sync(store.events, scenario_id, cursor, WS_BATCH)

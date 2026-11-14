@@ -14,6 +14,7 @@ from backend.app.models import (
     Assignment,
     ContractModel,
     CVObservation,
+    CVTrack,
     Identifier,
     Position,
     RecommendationMetadata,
@@ -23,9 +24,6 @@ from backend.app.models import (
 SimulationMode = Literal["simulation"]
 PositiveRevision = Annotated[int, Field(ge=1, strict=True)]
 CapabilityTag = Annotated[str, Field(min_length=1, pattern=r"\S")]
-
-
-# --- Requests -----------------------------------------------------------------
 
 
 class SimulationRequest(ContractModel):
@@ -118,7 +116,77 @@ class SimulateDeviceRequest(SimulationRequest):
     occurred_at: AwareDatetime | None = None
 
 
-# --- State records ------------------------------------------------------------
+NonblankIdentifier = Annotated[str, Field(min_length=1, pattern=r"\S")]
+Confidence = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
+
+
+class CameraRegistration(ContractModel):
+    """SIMULATION camera mapping. ``calibration_ref`` is a human/external
+    assertion that a world calibration exists; the backend computes nothing."""
+
+    mode: SimulationMode
+    actor: Identifier
+    mapping_mode: Literal["calibrated_world", "predefined_zones"]
+    calibration_ref: NonblankIdentifier | None = None
+    zones: dict[NonblankIdentifier, Position] | None = None
+
+    @model_validator(mode="after")
+    def validate_mapping(self) -> "CameraRegistration":
+        if self.mapping_mode == "calibrated_world":
+            if self.calibration_ref is None:
+                raise ValueError("calibrated_world requires a nonempty calibration_ref")
+            if self.zones is not None:
+                raise ValueError("calibrated_world cameras must not define zones")
+        elif not self.zones:
+            raise ValueError("predefined_zones requires at least one named zone Position")
+        return self
+
+
+class CameraObservation(ContractModel):
+    """Camera-local detection report; exactly one of position / zone_id.
+
+    No severity or clinical fields exist; ``source``/``kind`` are implied
+    (``cv`` / ``person_detected``)."""
+
+    mode: SimulationMode
+    id: Identifier
+    observed_at: AwareDatetime
+    confidence: Confidence
+    track: CVTrack
+    position: Position | None = None
+    zone_id: NonblankIdentifier | None = None
+
+    @model_validator(mode="after")
+    def validate_location(self) -> "CameraObservation":
+        if (self.position is None) == (self.zone_id is None):
+            raise ValueError("Provide exactly one of position or zone_id")
+        if self.track.last_seen_at > self.observed_at:
+            raise ValueError("last_seen_at must not follow observed_at")
+        return self
+
+
+class CameraRecord(ContractModel):
+    mode: SimulationMode = "simulation"
+    camera_id: Identifier
+    epoch: int
+    mapping_mode: Literal["calibrated_world", "predefined_zones"]
+    calibration_ref: str | None
+    zones: dict[str, Position] | None
+    registered_by: Identifier
+    registered_at: AwareDatetime
+
+
+class CameraProvenance(ContractModel):
+    """Where a track's latest location came from. ``zone_estimate`` positions
+    are the registered zone's reference point, not an observed coordinate."""
+
+    camera_id: Identifier
+    local_observation_id: Identifier
+    local_track_id: Identifier
+    mapping_mode: Literal["calibrated_world", "predefined_zones"]
+    location_basis: Literal["calibrated_world", "zone_estimate"]
+    zone_id: str | None
+    calibration_ref: str | None
 
 
 class TrackRecord(ContractModel):
@@ -126,6 +194,7 @@ class TrackRecord(ContractModel):
     casualty_id: Identifier | None
     latest_observation: CVObservation
     observation_count: int
+    camera: CameraProvenance | None = None
 
 
 class SimulationProposal(ContractModel):
@@ -149,6 +218,7 @@ class SimulationProposal(ContractModel):
     map_revision: str | None
     objective_values: dict[str, float]
     recommendation: RecommendationMetadata | None
+    location_provenance: dict[str, CameraProvenance] = Field(default_factory=dict)
     created_at: AwareDatetime
     expires_at: AwareDatetime
     approval_id: Identifier | None = None
@@ -211,6 +281,8 @@ class RecommendationState(ContractModel):
     engine: str | None
     unassigned_casualty_ids: list[Identifier]
     reasons: dict[str, list[str]]
+    location_provenance: dict[str, CameraProvenance] = Field(default_factory=dict)
+    location_rationale: list[str] = Field(default_factory=list)
     error: str | None = None
 
 
@@ -227,6 +299,7 @@ class SimulationState(ContractModel):
     scenario: Scenario
     required_capabilities: dict[str, list[str]]
     tracks: list[TrackRecord]
+    cameras: list[CameraRecord] = Field(default_factory=list)
     resolved_casualty_ids: list[Identifier]
     current_proposal_id: Identifier | None
     proposals: list[SimulationProposal]

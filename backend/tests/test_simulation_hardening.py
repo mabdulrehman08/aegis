@@ -5,7 +5,7 @@ import pytest
 from backend.app.simulation.models import ReplanRequest, ResetRequest
 from backend.app.simulation.store import SimulationError, SimulationStore
 from test_simulation_support import (
-    BASE, FRAME, FakeClock, approve_and_dispatch, current, decide, dispatch, make_client,
+    BASE, FRAME, FakeClock, approve_and_dispatch, assessment, current, decide, dispatch, make_client,
     observation, proposal, reset, state,
 )
 
@@ -38,7 +38,7 @@ def test_proposal_expiry_is_bounded_by_observation_freshness(client, clock):
     snapshot = track_casualty_001(client, clock)
     prop = current(snapshot)
     assert "casualty-001" in {a["casualty_id"] for a in prop["assignments"]}
-    assert prop["expires_at"] == clock.iso(30)  # freshness horizon, not the 120 s TTL
+    assert prop["expires_at"] == clock.iso(30)
     approval_id = decide(client, prop, "a").json()["result"]["id"]
     clock.advance(31)
     assert dispatch(client, prop, approval_id, "d").status_code == 409
@@ -59,7 +59,7 @@ def test_snapshot_applies_time_transition_without_mutation(client, clock):
     assert after["scene_revision"] == before["scene_revision"] + 1
     assert proposal(after, before["current_proposal_id"])["status"] in {"expired", "superseded"}
     assert after["last_recommendation"]["trigger"] == "observation_freshness_changed"
-    assert state(client)["scene_revision"] == after["scene_revision"]  # no churn
+    assert state(client)["scene_revision"] == after["scene_revision"]
 
 
 def test_restoring_stale_track_with_identical_values_replans(client, clock):
@@ -93,7 +93,7 @@ def test_every_authoritative_position_change_bumps_revision(client, clock):
     heartbeat = observation("obs-hb", "cam1-trk-1", 4.05, 8.0, observed_at=clock.iso(),
                             first_seen_at=first_seen, last_seen_at=clock.iso())
     same = client.post(f"{BASE}/observations", json=heartbeat).json()["state"]
-    assert same["scene_revision"] == snapshot["scene_revision"]  # nothing changed
+    assert same["scene_revision"] == snapshot["scene_revision"]
     nudged = client.patch(f"{BASE}/responders/responder-001",
                           json={"position": {"frame_id": FRAME, "x_m": 0.01, "y_m": 0.0}})
     assert nudged.json()["state"]["scene_revision"] == same["scene_revision"] + 1
@@ -135,7 +135,7 @@ def test_map_revision_cannot_be_reused_for_different_geometry(client):
     restored = client.put(f"{BASE}/map", json=original)
     assert restored.status_code == 200
     assert restored.json()["state"]["scenario"]["scene_map"]["revision"] == original["revision"]
-    reset(client)  # a new epoch reseeds the registry from the loaded map
+    reset(client)
     assert client.put(f"{BASE}/map", json={**changed, "revision": "rev-b2"}).status_code == 200
 
 
@@ -226,3 +226,74 @@ def test_reset_keeps_event_sequence_and_revision_monotonic(client):
     assert statuses == {"available"}
     old = first["proposals"][0]
     assert decide(client, old, "after-reset").status_code == 404
+
+
+def test_future_assessment_becoming_effective_invalidates_approval(client, clock):
+    reset(client)
+    for casualty_id in ("casualty-002", "casualty-003"):
+        response = client.post(f"{BASE}/casualties/{casualty_id}/assessment",
+                               json=assessment("immediate", clock.iso(-10)))
+        assert response.status_code == 201
+    response = client.post(f"{BASE}/casualties/casualty-001/assessment",
+                           json=assessment("minor", clock.iso(4)))
+    assert response.status_code == 201
+    prop = current(response.json()["state"])
+    assert {a["casualty_id"] for a in prop["assignments"]} == {"casualty-001", "casualty-002"}
+    assert prop["expires_at"] == clock.iso(4)
+    approval_id = decide(client, prop, "a").json()["result"]["id"]
+    clock.advance(5)
+    assert dispatch(client, prop, approval_id, "d").status_code == 409
+    after = state(client)
+    assert after["dispatches"] == []
+    assert next(a for a in after["approvals"] if a["id"] == approval_id)["status"] != "active"
+    assert {a["casualty_id"] for a in current(after)["assignments"]} == {
+        "casualty-002", "casualty-003"}
+
+
+def test_future_assessment_in_supplied_reset_scenario_transitions(client, clock):
+    scenario = state(client)["scenario"]
+    labels = {"casualty-001": ("minor", 4), "casualty-002": ("immediate", -10),
+              "casualty-003": ("immediate", -10)}
+    for casualty in scenario["casualties"]:
+        severity, offset = labels[casualty["id"]]
+        casualty["medical_assessment"] = assessment(severity, clock.iso(offset))
+    snapshot = reset(client, body={"scenario": scenario})
+    prop = current(snapshot)
+    assert {a["casualty_id"] for a in prop["assignments"]} == {"casualty-001", "casualty-002"}
+    assert prop["expires_at"] == clock.iso(4)
+    clock.advance(5)
+    after = state(client)
+    assert after["scene_revision"] == snapshot["scene_revision"] + 1
+    assert {a["casualty_id"] for a in current(after)["assignments"]} == {
+        "casualty-002", "casualty-003"}
+
+
+def test_late_automatic_solve_never_replaces_newer_proposal(clock):
+    from optimization.solver import optimize
+
+    from backend.app.simulation.models import ResponderUpdateRequest
+
+    gate = {"block": False}
+    started, release = threading.Event(), threading.Event()
+
+    def gated(request):
+        if gate["block"]:
+            gate["block"] = False
+            started.set()
+            assert release.wait(5)
+        return optimize(request)
+
+    store = SimulationStore(clock=clock, solver=gated)
+    store.reset("demo", ResetRequest())
+    gate["block"] = True
+    worker = threading.Thread(target=store.update_responder, args=(
+        "demo", "responder-002",
+        ResponderUpdateRequest(position={"frame_id": FRAME, "x_m": 21.0, "y_m": 0.0})))
+    worker.start()
+    assert started.wait(5)
+    explicit = store.replan("demo", ReplanRequest(actor="operator-1")).result
+    release.set()
+    worker.join(5)
+    snapshot = store.snapshot("demo")
+    assert snapshot.current_proposal_id == explicit["id"]
+    assert next(p for p in snapshot.proposals if p.id == explicit["id"]).status == "pending_approval"

@@ -24,6 +24,9 @@ Status and `assigned_count`/`new_assigned_count` describe only pending/new work;
 workload is feasible, even when existing work cannot currently be rerouted.
 Preserved null/unverifiable routes carry `active_route_unverified`; routes from
 a different supplied map revision carry `active_route_stale_map`.
+If an active casualty moves, its unchanged historical route carries
+`active_route_destination_changed`. These warnings also appear in explanation
+rationale and require human review; no route is silently rewritten.
 Capability tags are case-sensitive. An absent casualty requirement explicitly
 means no required tags, not a missing qualification inferred by the solver.
 

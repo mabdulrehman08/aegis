@@ -43,6 +43,10 @@ from backend.app.simulation.events import EventLog
 from backend.app.simulation.models import (
     ActionResponse,
     AssociationRequest,
+    CameraObservation,
+    CameraProvenance,
+    CameraRecord,
+    CameraRegistration,
     DecisionRequest,
     DispatchRequest,
     EventEnvelope,
@@ -71,6 +75,7 @@ OPEN_PROPOSAL_STATUSES = ("pending_approval", "approved")
 MILESTONE_RANK = {"dispatched": 0, "delivered": 1, "acknowledged": 2, "completed": 3}
 MAX_IDEMPOTENCY_KEYS = 4096
 EXPLICIT_REPLAN_ATTEMPTS = 3
+CAMERA_PREFIX = "sim-camera:"
 
 
 class SimulationError(Exception):
@@ -103,6 +108,11 @@ def _dump(model: BaseModel) -> dict[str, Any]:
 def _fingerprint(*parts: Any) -> str:
     raw = json.dumps(parts, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _camera_id(camera_id: str, local_id: str) -> str:
+    """Collision-free namespacing: the length prefix makes the split unambiguous."""
+    return f"{CAMERA_PREFIX}{len(camera_id)}:{camera_id}:{local_id}"
 
 
 def _map_fingerprint(scene_map: SceneMap) -> str:
@@ -140,12 +150,13 @@ class _Track:
     latest: CVObservation
     count: int = 1
     casualty_id: str | None = None
+    camera: CameraProvenance | None = None
 
 
 @dataclass
 class _Idempotent:
     fingerprint: str
-    response: ActionResponse | None  # None: reserved by an in-flight request
+    response: ActionResponse | None
 
 
 @dataclass
@@ -155,6 +166,24 @@ class _SolverJob:
     trigger: str
     request: Any
     now: datetime
+    location_provenance: dict[str, CameraProvenance] = field(default_factory=dict)
+
+    def location_rationale(self) -> list[str]:
+        notes = []
+        for casualty_id, source in sorted(self.location_provenance.items()):
+            if source.location_basis == "zone_estimate":
+                notes.append(
+                    f"At scene revision {self.revision}, {casualty_id} location is a zone_estimate: "
+                    f"the registered reference point of zone {source.zone_id} for SIMULATION camera "
+                    f"{source.camera_id} (local track {source.local_track_id}). It is not a precise "
+                    "observed coordinate; route distance is measured to that reference point.")
+            else:
+                notes.append(
+                    f"At scene revision {self.revision}, {casualty_id} location comes from SIMULATION "
+                    f"camera {source.camera_id} (local track {source.local_track_id}) under "
+                    f"calibrated_world mapping. calibration_ref {source.calibration_ref} is an "
+                    "external assertion; the backend does not compute or verify calibration.")
+        return notes
 
 
 @dataclass
@@ -166,7 +195,6 @@ class _Session:
     scene_revision: int = 0
     counters: dict[str, int] = field(default_factory=dict)
     idempotency: "OrderedDict[str, _Idempotent]" = field(default_factory=OrderedDict)
-    # Scene (reset per epoch).
     meta: Scenario | None = None
     casualties: dict[str, Casualty] = field(default_factory=dict)
     responders: dict[str, Responder] = field(default_factory=dict)
@@ -186,6 +214,7 @@ class _Session:
     assignments: dict[str, SimulatedAssignment] = field(default_factory=dict)
     device_events: dict[str, SimulatedDeviceEvent] = field(default_factory=dict)
     map_revisions: dict[str, str] = field(default_factory=dict)
+    cameras: dict[str, CameraRecord] = field(default_factory=dict)
     freshness_signature: tuple = ()
     last_recommendation: RecommendationState | None = None
 
@@ -247,7 +276,6 @@ class SimulationStore:
         self._sessions: dict[str, _Session] = {}
         self._nonce = secrets.token_hex(4)
 
-    # --- Session lookup ---------------------------------------------------------
 
     def _now(self) -> datetime:
         now = self.clock()
@@ -275,7 +303,6 @@ class SimulationStore:
         self.reset(scenario_id, ResetRequest(), only_if_unloaded=True)
         return self._get_or_create(scenario_id)
 
-    # --- Reads ------------------------------------------------------------------
 
     def tick(self, scenario_id: str) -> None:
         """Apply time-driven transitions (expiry, observation freshness) and replan once."""
@@ -328,7 +355,6 @@ class SimulationStore:
                 "proposal_revision": proposal.revision, "proposal_status": proposal.status,
                 "explanation": _dump(explanation)}
 
-    # --- Mutation engine ---------------------------------------------------------
 
     def _run(self, session: _Session, action: str, body: Any,
              apply: Callable[[datetime], tuple[dict[str, Any] | None, str | None, bool]],
@@ -455,13 +481,21 @@ class SimulationStore:
         age = (now - instant).total_seconds()
         return "future" if age < 0 else "stale" if age > self.freshness_seconds else "fresh"
 
+    def _future_assessments(self, session: _Session) -> list[tuple[str, datetime]]:
+        return [(casualty.id, casualty.medical_assessment.assessed_at)
+                for casualty in sorted(session.casualties.values(), key=lambda c: c.id)
+                if casualty.medical_assessment is not None and casualty.id not in session.resolved]
+
     def _freshness_signature(self, session: _Session, now: datetime) -> tuple:
         signature = []
         for casualty_id, observation in self._associated_observations(session):
-            entry = [casualty_id, self._classify(observation.observed_at, now)]
+            entry = ["observation", casualty_id, self._classify(observation.observed_at, now)]
             if observation.track is not None:
                 entry.append(self._classify(observation.track.last_seen_at, now))
             signature.append(tuple(entry))
+        for casualty_id, assessed_at in self._future_assessments(session):
+            signature.append(("assessment", casualty_id,
+                              "future" if assessed_at > now else "effective"))
         return tuple(signature)
 
     def _freshness_horizon(self, session: _Session, now: datetime) -> datetime | None:
@@ -473,10 +507,10 @@ class SimulationStore:
             if observation.track is not None:
                 stamps.append(observation.track.last_seen_at)
             instants.extend(stamp + offset for stamp in stamps for offset in (timedelta(0), window))
+        instants.extend(assessed_at for _, assessed_at in self._future_assessments(session))
         upcoming = [instant for instant in instants if instant > now]
         return min(upcoming) if upcoming else None
 
-    # --- Recommendation ----------------------------------------------------------
 
     def _prepare(self, session: _Session, now: datetime, trigger: str,
                  solver_name: str | None = None) -> _SolverJob | None:
@@ -504,7 +538,12 @@ class SimulationStore:
                      {"trigger": trigger, "scene_revision": session.scene_revision,
                       "actor": "system" if not trigger.startswith("explicit:") else trigger[9:]},
                      now)
-        return _SolverJob(session.epoch, session.scene_revision, trigger, request, now)
+        provenance = {
+            casualty_id: session.tracks[track_id].camera.model_copy()
+            for casualty_id, track_id in session.casualty_tracks.items()
+            if casualty_id in present and session.tracks[track_id].camera is not None
+        }
+        return _SolverJob(session.epoch, session.scene_revision, trigger, request, now, provenance)
 
     def _execute(self, session: _Session, job: _SolverJob) -> SimulationProposal | RecommendationState | None:
         """Run the solver unlocked; install only if the scene is unchanged.
@@ -519,12 +558,16 @@ class SimulationStore:
             result = None
             try:
                 result = self.solver(job.request.model_copy(deep=True))
-            except Exception as exc:  # solver faults must never corrupt state
+            except Exception as exc:
                 error = f"{type(exc).__name__}: {exc}"
             with session.lock:
                 now = self._now()
                 swept = self._sweep(session, now)
                 if session.epoch == job.epoch and session.scene_revision == job.revision:
+                    if not job.trigger.startswith("explicit:") and any(
+                            p.status in OPEN_PROPOSAL_STATUSES and p.revision == job.revision
+                            for p in session.proposals.values()):
+                        return None
                     return self._install(session, job, result, error)
                 if not (swept and self.auto_recommend):
                     return None
@@ -580,15 +623,17 @@ class SimulationStore:
                 unassigned_casualty_ids=[cid for cid in result.unassigned_casualty_ids
                                          if cid not in busy_casualties],
                 reasons={key: list(value) for key, value in result.reasons.items()},
-                rationale=list(result.rationale), engine=result.engine,
+                rationale=[*result.rationale, *job.location_rationale()], engine=result.engine,
                 runtime_ms=result.runtime_ms, map_revision=result.map_revision,
                 objective_values=dict(result.objective_values),
                 recommendation=result.metadata.model_copy(deep=True),
+                location_provenance={k: v.model_copy() for k, v in job.location_provenance.items()},
                 created_at=now, expires_at=expires_at,
             )
             session.proposals[proposal.id] = proposal
-            session.proposal_context[proposal.id] = (job.request.scenario.model_copy(deep=True),
-                                                    result.model_copy(deep=True))
+            session.proposal_context[proposal.id] = (
+                job.request.scenario.model_copy(deep=True),
+                result.model_copy(update={"rationale": list(proposal.rationale)}, deep=True))
             session.current_proposal_id = proposal.id
         recommendation = RecommendationState(
             scene_revision=job.revision, computed_at=now, trigger=job.trigger,
@@ -598,6 +643,8 @@ class SimulationStore:
             [cid for cid in result.unassigned_casualty_ids if cid not in busy_casualties],
             reasons={} if result is None or error else
             {key: list(value) for key, value in result.reasons.items()},
+            location_provenance={k: v.model_copy() for k, v in job.location_provenance.items()},
+            location_rationale=job.location_rationale(),
             error=error,
         )
         session.last_recommendation = recommendation
@@ -607,7 +654,6 @@ class SimulationStore:
             return proposal.model_copy(deep=True)
         return recommendation.model_copy(deep=True)
 
-    # --- Public mutations ---------------------------------------------------------
 
     def reset(self, scenario_id: str, request: ResetRequest | None = None,
               idempotency_key: str | None = None, *, only_if_unloaded: bool = False) -> ActionResponse:
@@ -644,7 +690,7 @@ class SimulationStore:
             for name in ("tracks", "casualty_tracks", "observation_fingerprints",
                          "responder_reported_at", "responder_preferences", "proposals",
                          "proposal_context", "approvals", "dispatches", "assignments",
-                         "device_events"):
+                         "device_events", "cameras"):
                 getattr(session, name).clear()
             session.resolved.clear()
             session.map_revisions = ({scenario.scene_map.revision: _map_fingerprint(scenario.scene_map)}
@@ -652,7 +698,7 @@ class SimulationStore:
             session.freshness_signature = ()
             session.current_proposal_id = None
             session.last_recommendation = None
-            revision = session.scene_revision + 1  # applied by the "reset" impact bump
+            revision = session.scene_revision + 1
             session.emit("simulation.reset", {"epoch": session.epoch, "scene_revision": revision,
                                               "scenario": _dump(session.scenario())}, now)
             return {"epoch": session.epoch, "scene_revision": revision}, "reset", False
@@ -664,64 +710,150 @@ class SimulationStore:
         session = self._session(scenario_id)
 
         def apply(now: datetime):
-            fingerprint = _fingerprint(_dump(observation))
-            known = session.observation_fingerprints.get(observation.id)
-            payload = {"observation_id": observation.id}
-            if known is not None:
-                if known != fingerprint:
-                    raise _conflict(f"Observation {observation.id} was already received with different content")
-                return payload, None, True
-            self._check_frame(session, observation.position)
-            if observation.observed_at > now + self.skew:
-                raise _invalid("observed_at is in the future")
-            cause = None
-            casualty_id = None
-            track = observation.track
-            if track is not None:
-                record = session.tracks.get(track.track_id)
-                if record is not None:
-                    previous = record.latest
-                    assert previous.track is not None
-                    if observation.observed_at < previous.observed_at:
-                        raise _conflict("Stale observation: older than the track's latest update")
-                    if track.first_seen_at != previous.track.first_seen_at:
-                        raise _conflict("Track identity conflict: first_seen_at differs for this track_id")
-                    if track.last_seen_at < previous.track.last_seen_at:
-                        raise _conflict("Stale observation: last_seen_at regresses")
-                    if track.state != "visible" and (
-                            observation.position != previous.position
-                            or observation.confidence != previous.confidence
-                            or track.last_seen_at != previous.track.last_seen_at):
-                        raise _conflict(f"A {track.state} report must retain the last actual "
-                                        "detection's position, confidence and last_seen_at")
-                    record.latest = observation.model_copy(deep=True)
-                    record.count += 1
-                    casualty_id = record.casualty_id
-                    if casualty_id is not None:
-                        # Any authoritative position change bumps the revision; freshness
-                        # transitions (e.g. a stale track restored) are caught by the
-                        # freshness signature in _run.
-                        impactful = (
-                            session.casualties[casualty_id].position != observation.position
-                            or previous.track.state != track.state
-                            or (previous.confidence >= self.min_confidence)
-                            != (observation.confidence >= self.min_confidence)
-                        )
-                        self._set_casualty_position(session, casualty_id, observation.position)
-                        if impactful:
-                            cause = f"observation:{track.track_id}"
-                else:
-                    session.tracks[track.track_id] = _Track(track.track_id,
-                                                            observation.model_copy(deep=True))
-            session.observation_fingerprints[observation.id] = fingerprint
-            session.emit("simulation.observation_received",
-                         {"observation": _dump(observation),
-                          "track_id": track.track_id if track else None,
-                          "casualty_id": casualty_id}, now)
-            payload.update(track_id=track.track_id if track else None, casualty_id=casualty_id)
-            return payload, cause, False
+            reserved = [value for value in (observation.id, observation.track and observation.track.track_id)
+                        if value and value.startswith(CAMERA_PREFIX)]
+            if reserved:
+                raise _invalid(f"IDs starting with {CAMERA_PREFIX!r} are reserved for camera ingest")
+            return self._apply_observation(session, observation, now, None)
 
         return self._run(session, "observation", _dump(observation), apply, idempotency_key)
+
+    def register_camera(self, scenario_id: str, camera_id: str, request: CameraRegistration,
+                        idempotency_key: str | None = None) -> ActionResponse:
+        """Register a SIMULATION camera mapping; immutable for the epoch."""
+        session = self._session(scenario_id)
+
+        def apply(now: datetime):
+            for zone_id, position in (request.zones or {}).items():
+                self._check_frame(session, position)
+            config = {"mapping_mode": request.mapping_mode,
+                      "calibration_ref": request.calibration_ref,
+                      "zones": {k: _dump(v) for k, v in (request.zones or {}).items()} or None}
+            existing = session.cameras.get(camera_id)
+            if existing is not None:
+                current = {"mapping_mode": existing.mapping_mode,
+                           "calibration_ref": existing.calibration_ref,
+                           "zones": {k: _dump(v) for k, v in (existing.zones or {}).items()} or None}
+                if current != config:
+                    raise _conflict("Camera mapping is immutable within an epoch; reset to remap")
+                return _dump(existing), None, True
+            record = CameraRecord(
+                camera_id=camera_id, epoch=session.epoch, mapping_mode=request.mapping_mode,
+                calibration_ref=request.calibration_ref,
+                zones={k: v.model_copy(deep=True) for k, v in request.zones.items()}
+                if request.zones else None,
+                registered_by=request.actor, registered_at=now,
+            )
+            session.cameras[camera_id] = record
+            session.emit("simulation.camera_registered", _dump(record), now)
+            return _dump(record), None, False
+
+        return self._run(session, "camera_registration", [camera_id, _dump(request)], apply,
+                         idempotency_key)
+
+    def ingest_camera_observation(self, scenario_id: str, camera_id: str,
+                                  body: CameraObservation,
+                                  idempotency_key: str | None = None) -> ActionResponse:
+        """Convert a camera report via its registered mapping, then ingest it.
+
+        Observation and track IDs are namespaced per camera, so equal local IDs
+        from two cameras never merge. No casualty association or cross-camera
+        re-identification happens here.
+        """
+        session = self._session(scenario_id)
+
+        def apply(now: datetime):
+            camera = session.cameras.get(camera_id)
+            if camera is None:
+                raise _not_found(f"Camera {camera_id} is not registered in this epoch")
+            if camera.mapping_mode == "calibrated_world":
+                if body.position is None or body.zone_id is not None:
+                    raise _invalid("calibrated_world cameras must report exactly a position")
+                self._check_frame(session, body.position)
+                position, basis = body.position, "calibrated_world"
+            else:
+                if body.zone_id is None or body.position is not None:
+                    raise _invalid("predefined_zones cameras must report exactly a zone_id")
+                assert camera.zones is not None
+                if body.zone_id not in camera.zones:
+                    raise _invalid(f"Unknown zone {body.zone_id} for camera {camera_id}")
+                position, basis = camera.zones[body.zone_id], "zone_estimate"
+            track = body.track.model_copy(update={"track_id": _camera_id(camera_id, body.track.track_id)})
+            observation = CVObservation(
+                id=_camera_id(camera_id, body.id), source="cv", observed_at=body.observed_at,
+                position=position.model_copy(deep=True), kind="person_detected",
+                confidence=body.confidence, track=track,
+            )
+            provenance = CameraProvenance(
+                camera_id=camera_id, local_observation_id=body.id,
+                local_track_id=body.track.track_id, mapping_mode=camera.mapping_mode,
+                location_basis=basis, zone_id=body.zone_id,
+                calibration_ref=camera.calibration_ref,
+            )
+            return self._apply_observation(session, observation, now, provenance)
+
+        return self._run(session, "camera_observation", [camera_id, _dump(body)], apply,
+                         idempotency_key)
+
+    def _apply_observation(self, session: _Session, observation: CVObservation, now: datetime,
+                           provenance: CameraProvenance | None):
+        fingerprint = _fingerprint(_dump(observation))
+        known = session.observation_fingerprints.get(observation.id)
+        payload = {"observation_id": observation.id,
+                   "camera": _dump(provenance) if provenance else None}
+        if known is not None:
+            if known != fingerprint:
+                raise _conflict(f"Observation {observation.id} was already received with different content")
+            return payload, None, True
+        self._check_frame(session, observation.position)
+        if observation.observed_at > now + self.skew:
+            raise _invalid("observed_at is in the future")
+        cause = None
+        casualty_id = None
+        track = observation.track
+        if track is not None:
+            record = session.tracks.get(track.track_id)
+            if record is not None:
+                previous = record.latest
+                assert previous.track is not None
+                if observation.observed_at < previous.observed_at:
+                    raise _conflict("Stale observation: older than the track's latest update")
+                if track.first_seen_at != previous.track.first_seen_at:
+                    raise _conflict("Track identity conflict: first_seen_at differs for this track_id")
+                if track.last_seen_at < previous.track.last_seen_at:
+                    raise _conflict("Stale observation: last_seen_at regresses")
+                if track.state != "visible" and (
+                        observation.position != previous.position
+                        or observation.confidence != previous.confidence
+                        or track.last_seen_at != previous.track.last_seen_at):
+                    raise _conflict(f"A {track.state} report must retain the last actual "
+                                    "detection's position, confidence and last_seen_at")
+                record.latest = observation.model_copy(deep=True)
+                record.count += 1
+                record.camera = provenance.model_copy() if provenance else None
+                casualty_id = record.casualty_id
+                if casualty_id is not None:
+                    impactful = (
+                        session.casualties[casualty_id].position != observation.position
+                        or previous.track.state != track.state
+                        or (previous.confidence >= self.min_confidence)
+                        != (observation.confidence >= self.min_confidence)
+                    )
+                    self._set_casualty_position(session, casualty_id, observation.position)
+                    if impactful:
+                        cause = f"observation:{track.track_id}"
+            else:
+                session.tracks[track.track_id] = _Track(
+                    track.track_id, observation.model_copy(deep=True),
+                    camera=provenance.model_copy() if provenance else None)
+        session.observation_fingerprints[observation.id] = fingerprint
+        session.emit("simulation.observation_received",
+                     {"observation": _dump(observation),
+                      "track_id": track.track_id if track else None,
+                      "casualty_id": casualty_id,
+                      "camera": _dump(provenance) if provenance else None}, now)
+        payload.update(track_id=track.track_id if track else None, casualty_id=casualty_id)
+        return payload, cause, False
 
     def associate_track(self, scenario_id: str, request: AssociationRequest,
                         idempotency_key: str | None = None) -> ActionResponse:
@@ -810,7 +942,6 @@ class SimulationStore:
                 updated.capabilities = sorted(set(request.capabilities))
             if request.status is not None:
                 if any(item.responder_id == responder_id for item in session.active_assignments()):
-                    # Active simulated work is preserved; remember the post-task preference.
                     session.responder_preferences[responder_id] = request.status
                     updated.status = "offline" if request.status == "offline" else "busy"
                 else:
@@ -884,7 +1015,7 @@ class SimulationStore:
             replay = self._replay(session, idempotency_key, fingerprint)
             if replay is not None:
                 return replay
-            if idempotency_key is not None:  # reserve atomically before unlocking
+            if idempotency_key is not None:
                 self._remember(session, idempotency_key, fingerprint, None)
         trigger = f"explicit:{request.actor}" + (f":{request.reason}" if request.reason else "")
         try:
@@ -1083,10 +1214,10 @@ class SimulationStore:
         result = {"event_id": event.id, "assignment_id": record.id, "state_changed": False,
                   "device_event": _dump(event)}
         if getattr(record, stamp) is not None:
-            return result, None, False  # milestone retry under a new event ID
+            return result, None, False
         setattr(record, stamp, event.occurred_at)
         if MILESTONE_RANK[event.kind] > MILESTONE_RANK[record.status]:
-            record.status = event.kind  # out-of-order reports never regress status
+            record.status = event.kind
         result["state_changed"] = True
         session.emit(f"simulation.device_{event.kind}",
                      {"device_event": _dump(event), "assignment": _dump(record)}, now)
@@ -1099,7 +1230,6 @@ class SimulationStore:
                           "assignment_id": record.id}, now)
         return result, f"device:{event.kind}:{record.id}", False
 
-    # --- Helpers -----------------------------------------------------------------
 
     def _check_frame(self, session: _Session, position: Position) -> None:
         assert session.meta is not None
@@ -1113,7 +1243,8 @@ class SimulationStore:
     def _state(self, session: _Session, now: datetime) -> SimulationState:
         tracks = [TrackRecord(track_id=t.track_id, casualty_id=t.casualty_id,
                               latest_observation=t.latest.model_copy(deep=True),
-                              observation_count=t.count)
+                              observation_count=t.count,
+                              camera=t.camera.model_copy() if t.camera else None)
                   for t in sorted(session.tracks.values(), key=lambda t: t.track_id)]
         return SimulationState(
             scenario_id=session.scenario_id, epoch=session.epoch,
@@ -1122,6 +1253,7 @@ class SimulationStore:
             required_capabilities={cid: list(tags) for cid, tags in
                                    sorted(session.required_capabilities.items())},
             tracks=tracks, resolved_casualty_ids=sorted(session.resolved),
+            cameras=[c.model_copy(deep=True) for _, c in sorted(session.cameras.items())],
             current_proposal_id=session.current_proposal_id,
             proposals=[p.model_copy(deep=True) for p in session.proposals.values()],
             approvals=[a.model_copy(deep=True) for a in session.approvals.values()],

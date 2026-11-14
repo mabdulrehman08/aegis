@@ -205,6 +205,7 @@ def optimize(request: OptimizationRequest) -> OptimizationResult:
     preserved.sort(key=lambda assignment: (assignment.casualty_id, assignment.responder_id))
     active_casualties = {assignment.casualty_id for assignment in preserved}
     active_responders = {assignment.responder_id for assignment in preserved}
+    casualty_positions = {casualty.id: casualty.position for casualty in scene.casualties}
     for casualty in scene.casualties:
         if casualty.id in active_casualties:
             reasons[casualty.id] = ["active_assignment_preserved", *_observation_reasons(casualty, request)]
@@ -214,6 +215,15 @@ def optimize(request: OptimizationRequest) -> OptimizationResult:
         if (assignment.route is not None and scene_map is not None
                 and assignment.route.map_revision != scene_map.revision):
             reasons[assignment.casualty_id].append("active_route_stale_map")
+        if (assignment.route is not None
+                and assignment.route.waypoints[-1] != casualty_positions[assignment.casualty_id]):
+            reasons[assignment.casualty_id].append("active_route_destination_changed")
+        warnings = [reason for reason in reasons[assignment.casualty_id]
+                    if reason.startswith("active_route_")]
+        if warnings:
+            rationale.append(f"Preserved {assignment.casualty_id}/{assignment.responder_id} requires "
+                             f"human route review: {', '.join(warnings)}. "
+                             "Historical approval is retained; the route is not silently replaced.")
     routes: dict[tuple[str, str], AStarRoute] = {}
     priorities = {casualty.id: _priority(casualty, request) for casualty in scene.casualties}
     new_pairs: list[tuple[str, str]] = []

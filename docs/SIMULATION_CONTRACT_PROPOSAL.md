@@ -36,6 +36,19 @@ Consumers must adopt the local schemas explicitly, keep the simulation banner
 visible, and recover from a fresh authoritative snapshot after gaps or resets.
 Server-side events are notifications, not client commands or authorizations.
 
+## Additive camera mapping proposal
+
+`PUT /cameras/{camera_id}` and `POST /cameras/{camera_id}/observations` under the
+same simulation namespace add explicit local camera provenance without changing
+the shared `CVObservation`. A camera is externally calibrated into the scene
+frame, or an operator registers named zone reference points in that frame.
+Zone locations are labelled `zone_estimate`; no homography, spatial transform,
+or cross-camera identity matching is inferred. Camera/local IDs are namespaced;
+only explicit operator association connects a track to a casualty. Mappings are
+immutable within an epoch and cleared by reset. The old normalized observation
+endpoint reserves the `sim-camera:` prefix but otherwise retains its schema.
+Review this additive local interface with AskAr and Hillary before adoption.
+
 Local proposal lifecycle additionally describes supersession, dispatch, and
 closure reasons without changing the reserved DispatchProposal enum. Approval
 and execution records always retain simulation provenance. No device completion

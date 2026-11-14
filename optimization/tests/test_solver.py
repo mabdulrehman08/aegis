@@ -104,6 +104,20 @@ def test_existing_active_assignments_reserved_and_unchanged_despite_uncertainty(
     assert supplied.model_dump() == before
 
 
+@pytest.mark.parametrize("engine", ENGINES)
+def test_moving_active_casualty_flags_historical_destination_without_rewriting(scenario, engine):
+    route = plan_route(scenario.scene_map, scenario.responders[0].position,
+                       scenario.casualties[0].position)
+    active = Assignment(casualty_id="c1", responder_id="r1", route=route)
+    scenario.casualties[0].position = position(5.5, 4.5)
+    result = optimize(request(scenario, engine, active_assignments=[active]))
+    assert result.preserved_assignments == [active]
+    assert "active_route_destination_changed" in result.reasons["c1"]
+    assert any("active_route_destination_changed" in text for text in result.rationale)
+    assert "c1" not in result.unassigned_casualty_ids
+    assert all(assignment.casualty_id != "c1" for assignment in result.assignments)
+
+
 @pytest.mark.parametrize("active", [
     [("missing", "r1")], [("c1", "missing")],
     [("c1", "r1"), ("c2", "r1")], [("c1", "r1"), ("c1", "r2")],
