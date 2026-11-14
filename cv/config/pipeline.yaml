@@ -17,6 +17,7 @@ detector:
   tracker: bytetrack.yaml
 
 mapping:
+  mode: calibrated              # calibrated = homography; zones = see config/phone.yaml
   homography: homography.json   # written by cv.tools.calibrate
   frame_id: demo-floor-1        # default frame for calibration; must match the scenario
 
@@ -32,6 +33,8 @@ tracking:
   lying_max_torso_m: 0.75   # shoulder-hip distance on the floor plane below this = lying
   reattach: true            # a new tracker ID near an occluded track resumes that track
   reattach_radius_m: 0.6
+  reattach_radius_frac: 0.08  # zones mode: same, as a fraction of the frame diagonal
+  zone_switch_frames: 5       # zones mode: frames in a new zone before switching
 
 publisher:
   base_url: http://127.0.0.1:8000
@@ -43,4 +46,4 @@ publisher:
   heartbeat_s: 1.0          # unchanged tracks are re-sent at this interval
   timeout_s: 1.5
   max_backoff_s: 5.0
-  mock_log: artifacts/mock_observations.jsonl   # relative to cv/
+  mock_log: artifacts/mock_{camera_id}.jsonl   # relative to cv/

@@ -36,8 +36,10 @@ class DetectorSettings:
 
 @dataclass(frozen=True)
 class MappingSettings:
+    mode: str = "calibrated"            # calibrated (homography) | zones (predefined zones)
     homography: str = "homography.json"
     frame_id: str = "demo-floor-1"
+    zones: tuple = ()                   # used when mode is zones; see cv/zones.py
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,8 @@ class TrackingSettings:
     lying_max_torso_m: float = 0.75
     reattach: bool = True
     reattach_radius_m: float = 0.6
+    reattach_radius_frac: float = 0.08  # zones mode: image distance / frame diagonal
+    zone_switch_frames: int = 5         # zones mode: frames in a new zone before switching
 
 
 @dataclass(frozen=True)
@@ -66,7 +70,7 @@ class PublisherSettings:
     heartbeat_s: float = 1.0
     timeout_s: float = 1.5
     max_backoff_s: float = 5.0
-    mock_log: str = "artifacts/mock_observations.jsonl"
+    mock_log: str = "artifacts/mock_{camera_id}.jsonl"
 
 
 @dataclass(frozen=True)

@@ -109,6 +109,48 @@ def test_full_track_lifecycle_is_accepted_by_the_running_backend():
     assert all(t["casualty_id"] is None for t in state["tracks"])  # association is human-only
 
 
+def test_phone_zone_camera_lifecycle_is_accepted_by_the_running_backend():
+    from cv.zones import parse_zones
+
+    client = TestClient(create_app())
+    client.post("/api/v1/simulations/demo/reset", json={"mode": "simulation"})
+    # Prince's --prepare-only registration; ours is identical, so no 409.
+    prepared = client.put("/api/v1/simulations/demo/cameras/phone-1", json={
+        "mode": "simulation", "actor": "live-demo-operator", "mapping_mode": "predefined_zones",
+        "zones": {"zone-b": {"frame_id": "demo-floor-1", "x_m": 3, "y_m": 2}}})
+    assert prepared.status_code == 200
+
+    def transport(method, path, body):
+        response = client.request(method, path, json=body)
+        return response.status_code, response.json()
+
+    timebase = Timebase()
+    zones = parse_zones([{"id": "zone-b", "x_m": 3.0, "y_m": 2.0}], "demo-floor-1")
+    publisher = Publisher(PublisherSettings(camera_id="phone-1", heartbeat_s=0.0),
+                          frame_id="demo-floor-1", calibration_ref=None, session_id="s1",
+                          timebase=timebase, transport=transport, zones=zones)
+    CameraRegistration.model_validate(publisher.registration_body())
+    t0 = timebase.now() - 2.0
+
+    def zone_report(t, state="visible", last_seen=None):
+        return TrackReport(track_id="s1-t1", state=state, observed_t=t, first_seen_t=t0,
+                           last_seen_t=t if last_seen is None else last_seen, x_m=3.0, y_m=2.0,
+                           confidence=0.8, capture_t=t, zone_id="zone-b")
+
+    for item in [zone_report(t0), zone_report(t0 + 0.5),
+                 zone_report(t0 + 1.0, "occluded", last_seen=t0 + 0.5),
+                 zone_report(t0 + 1.5, "lost", last_seen=t0 + 0.5)]:
+        publisher.submit([item], item.observed_t)
+        publisher.step()
+    assert publisher.stats.rejected == 0, publisher.stats.last_error
+    assert publisher.stats.accepted == 4
+    (track,) = client.get("/api/v1/simulations/demo/state").json()["tracks"]
+    assert track["track_id"] == "sim-camera:7:phone-1:s1-t1"
+    assert track["camera"]["location_basis"] == "zone_estimate"
+    assert track["camera"]["zone_id"] == "zone-b"
+    assert track["latest_observation"]["track"]["state"] == "lost"
+
+
 def test_backend_reset_clears_the_camera_and_publisher_recovers():
     client = TestClient(create_app())
     client.post("/api/v1/simulations/demo/reset", json={"mode": "simulation"})

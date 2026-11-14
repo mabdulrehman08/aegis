@@ -2,8 +2,10 @@
 
 Wire format (see shared/CONTRACT.md and docs/INTEGRATION.md):
 - ``endpoint: camera`` (default): ``PUT /api/v1/simulations/{scenario}/cameras/{camera_id}``
-  once (``mapping_mode: calibrated_world``), then
-  ``POST .../cameras/{camera_id}/observations`` with a ``CameraObservation``.
+  once, then ``POST .../cameras/{camera_id}/observations`` with a
+  ``CameraObservation``. With a homography the camera is ``calibrated_world``
+  and reports a ``position``; with a zone map it is ``predefined_zones`` and
+  reports a ``zone_id`` (the backend uses the zone's reference point).
 - ``endpoint: legacy``: ``POST /api/v1/simulations/{scenario}/observations`` with a
   contract ``CVObservation``.
 
@@ -34,6 +36,7 @@ from typing import Any, Callable
 from cv.clock import Timebase
 from cv.settings import PublisherSettings
 from cv.tracker import TrackReport
+from cv.zones import ZoneMap
 
 log = logging.getLogger(__name__)
 MIN_CONFIDENCE_BUCKET = 0.5  # backend treats crossing this as an impactful change
@@ -112,14 +115,19 @@ class PublisherStats:
 
 
 class Publisher:
-    def __init__(self, settings: PublisherSettings, *, frame_id: str, calibration_ref: str,
+    def __init__(self, settings: PublisherSettings, *, frame_id: str, calibration_ref: str | None,
                  session_id: str, timebase: Timebase, transport: Transport,
-                 clock: Callable[[], float] | None = None):
+                 clock: Callable[[], float] | None = None, zones: ZoneMap | None = None):
         if settings.endpoint not in ("camera", "legacy"):
             raise ValueError("publisher.endpoint must be 'camera' or 'legacy'")
+        if zones is not None and settings.endpoint != "camera":
+            raise ValueError("zones mapping needs publisher.endpoint: camera")
+        if zones is None and not calibration_ref:
+            raise ValueError("a calibrated camera needs a calibration_ref")
         self.settings = settings
         self.frame_id = frame_id
         self.calibration_ref = calibration_ref
+        self.zones = zones
         self.session_id = session_id
         self.timebase = timebase
         self.transport = transport
@@ -160,7 +168,7 @@ class Publisher:
         queued = 0
         with self._lock:
             for report in reports:
-                key = (report.state, report.x_m, report.y_m,
+                key = (report.state, report.x_m, report.y_m, report.zone_id,
                        report.confidence >= MIN_CONFIDENCE_BUCKET)
                 previous = self._last_submitted.get(report.track_id)
                 due = (previous is None or previous[0] != key or report.state == "lost"
@@ -189,7 +197,12 @@ class Publisher:
             if source is None:
                 return None
         timebase = self.timebase
-        position = {"frame_id": self.frame_id, "x_m": source.x_m, "y_m": source.y_m}
+        if self.zones is not None:
+            if source.zone_id is None:
+                return None
+            location = {"zone_id": source.zone_id}
+        else:
+            location = {"position": {"frame_id": self.frame_id, "x_m": source.x_m, "y_m": source.y_m}}
         track_id = report.track_id
         observation_id = outgoing.observation_id
         if self.settings.endpoint == "legacy":
@@ -202,14 +215,22 @@ class Publisher:
             "last_seen_at": timebase.iso(source.last_seen_t),
         }
         common = {"id": observation_id, "observed_at": timebase.iso(report.observed_t),
-                  "confidence": source.confidence, "track": track, "position": position}
+                  "confidence": source.confidence, "track": track, **location}
         if self.settings.endpoint == "camera":
             return {"mode": "simulation", **common}
         return {"source": "cv", "kind": "person_detected", **common}
 
     def registration_body(self) -> dict:
-        return {"mode": "simulation", "actor": self.settings.actor,
-                "mapping_mode": "calibrated_world", "calibration_ref": self.calibration_ref}
+        body = {"mode": "simulation", "actor": self.settings.actor}
+        if self.zones is not None:
+            return {**body, "mapping_mode": "predefined_zones", "zones": self.zones.registration()}
+        return {**body, "mapping_mode": "calibrated_world", "calibration_ref": self.calibration_ref}
+
+    @property
+    def mapping_label(self) -> str:
+        if self.zones is not None:
+            return "predefined_zones " + ",".join(zone.zone_id for zone in self.zones.zones)
+        return f"calibrated_world {self.calibration_ref}"
 
     # ------------------------------------------------------------- consumer
     def step(self) -> None:
@@ -277,7 +298,7 @@ class Publisher:
         if 200 <= status < 300:
             self._registered = True
             self.stats.registrations += 1
-            log.info("Registered camera %s (%s)", self.settings.camera_id, self.calibration_ref)
+            log.info("Registered camera %s (%s)", self.settings.camera_id, self.mapping_label)
             return True
         if status == 409:
             # Immutable for this epoch: someone registered a different mapping.
@@ -285,7 +306,7 @@ class Publisher:
             self.stats.registrations += 1
             log.warning("Camera %s is already registered with a different mapping this epoch; "
                         "observations will use it. Reset the scenario to apply %s.",
-                        self.settings.camera_id, self.calibration_ref)
+                        self.settings.camera_id, self.mapping_label)
             return True
         self._backoff(f"Camera registration HTTP {status}: {_detail(data)}")
         return False

@@ -6,6 +6,9 @@ Responsibilities:
   (optional spatial re-attach to a recently occluded track).
 - Floor position: ground point -> homography -> EMA -> deadband, so the
   published position only changes when the person actually moved.
+- Zones mode (no homography): the ground point picks a predefined zone, which
+  only changes after ``zone_switch_frames`` consecutive frames in the new zone.
+  The published position is then the zone's reference point, not a measurement.
 - Explicit uncertainty: ``detected`` (seen this frame), ``state``
   (visible / occluded / lost, debounced by ``occlusion_grace_s``), ``stale``,
   and ``mapping_valid``. Nothing is dropped silently.
@@ -21,6 +24,7 @@ from cv.detector import Detection
 from cv.homography import Calibration, ground_point
 from cv.observations import UNKNOWN_POSTURE, PostureEstimate, classify_posture, vote_posture
 from cv.settings import TrackingSettings
+from cv.zones import ZoneMap
 
 
 @dataclass
@@ -40,6 +44,9 @@ class Track:
     map_xy: tuple[float, float] | None = None        # latest raw mapping of this frame
     smoothed_xy: tuple[float, float] | None = None
     published_xy: tuple[float, float] | None = None  # stabilized (deadband) position
+    zone_id: str | None = None                       # zones mode: published zone
+    zone_candidate: str | None = None
+    zone_count: int = 0
     mapping_valid: bool = False
     detected: bool = False                           # detected in the latest frame
     state: str = "visible"                           # visible / occluded / lost
@@ -72,14 +79,18 @@ class TrackReport:
     y_m: float
     confidence: float
     capture_t: float
+    zone_id: str | None = None
 
 
 class TrackManager:
     def __init__(self, settings: TrackingSettings, session_id: str,
-                 calibration: Calibration | None = None):
+                 calibration: Calibration | None = None, zones: ZoneMap | None = None,
+                 image_size: tuple[int, int] | None = None):
         self.settings = settings
         self.session_id = session_id
         self.calibration = calibration
+        self.zones = zones
+        self.image_size = image_size
         self.tracks: dict[str, Track] = {}
         self._raw_to_track: dict[int, str] = {}
         self._retired_unreported: list[Track] = []
@@ -93,6 +104,9 @@ class TrackManager:
 
     def set_calibration(self, calibration: Calibration | None) -> None:
         self.calibration = calibration
+
+    def set_zones(self, zones: ZoneMap | None, image_size: tuple[int, int] | None) -> None:
+        self.zones, self.image_size = zones, image_size
 
     def _to_floor(self, point) -> tuple[float, float] | None:
         return self.calibration.point_to_world(point) if self.calibration else None
@@ -133,8 +147,8 @@ class TrackManager:
 
         for detection in new:
             posture = self._classify(detection)
-            _, _, xy = self._measure(detection, posture)
-            target = self._reattach_candidate(xy) if self.settings.reattach else None
+            ground, _, xy = self._measure(detection, posture)
+            target = self._reattach_candidate(xy, ground) if self.settings.reattach else None
             if target is None:
                 target = self._create(t)
             else:
@@ -155,14 +169,27 @@ class TrackManager:
         self.tracks[track.track_id] = track
         return track
 
-    def _reattach_candidate(self, xy) -> Track | None:
-        if xy is None:
-            return None
-        best, best_distance = None, self.settings.reattach_radius_m
+    def _reattach_candidate(self, xy, ground_px) -> Track | None:
+        """Nearest unseen live track: floor distance, or image distance in zones mode."""
+        if self.zones is not None:
+            if ground_px is None or not self.image_size:
+                return None
+            point, best_distance = ground_px, self.settings.reattach_radius_frac * math.hypot(*self.image_size)
+
+            def anchor(track):
+                return track.ground_px if track.zone_id is not None else None
+        else:
+            if xy is None:
+                return None
+            point, best_distance = xy, self.settings.reattach_radius_m
+
+            def anchor(track):
+                return track.smoothed_xy
+        best = None
         for track in self.tracks.values():
-            if track.detected or track.smoothed_xy is None:
+            if track.detected or anchor(track) is None:
                 continue
-            distance = math.dist(xy, track.smoothed_xy)
+            distance = math.dist(point, anchor(track))
             if distance <= best_distance:
                 best, best_distance = track, distance
         return best
@@ -187,6 +214,9 @@ class TrackManager:
         track.posture = vote_posture(track.posture_history)
         track.ground_px, track.ground_method, xy = self._measure(detection, track.posture)
         track.map_xy = xy
+        if self.zones is not None:
+            self._apply_zone(track)
+            return
         track.mapping_valid = xy is not None
         if xy is None:
             return
@@ -198,6 +228,21 @@ class TrackManager:
                                  alpha * xy[1] + (1 - alpha) * track.smoothed_xy[1])
         if track.published_xy is None or math.dist(track.smoothed_xy, track.published_xy) > settings.deadband_m:
             track.published_xy = (round(track.smoothed_xy[0], 2), round(track.smoothed_xy[1], 2))
+
+    def _apply_zone(self, track: Track) -> None:
+        zone = self.zones.zone_at(track.ground_px, self.image_size)
+        track.mapping_valid = zone is not None
+        if zone is None or zone.zone_id == track.zone_id:
+            track.zone_candidate, track.zone_count = None, 0
+            return
+        if zone.zone_id == track.zone_candidate:
+            track.zone_count += 1
+        else:
+            track.zone_candidate, track.zone_count = zone.zone_id, 1
+        if track.zone_id is None or track.zone_count >= self.settings.zone_switch_frames:
+            track.zone_id = zone.zone_id
+            track.published_xy = (zone.x_m, zone.y_m)
+            track.zone_candidate, track.zone_count = None, 0
 
     def _refresh(self, t: float) -> None:
         settings = self.settings
@@ -236,6 +281,6 @@ class TrackManager:
                 first_seen_t=track.first_seen, last_seen_t=track.last_seen,
                 x_m=track.published_xy[0], y_m=track.published_xy[1],
                 confidence=round(min(1.0, max(0.0, track.confidence_smoothed)), 2),
-                capture_t=track.last_capture,
+                capture_t=track.last_capture, zone_id=track.zone_id,
             ))
         return reports

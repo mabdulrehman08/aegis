@@ -1,0 +1,34 @@
+# Phone as camera 2 (iPhone via Continuity Camera, or any webcam index).
+# No floor calibration: people are reported by predefined zone. The backend
+# places them at the zone's reference point and labels it a zone_estimate.
+# Unlisted settings use the defaults in cv/settings.py (same as pipeline.yaml).
+#
+#   python -m cv.main --config cv/config/phone.yaml
+#
+# The zones must match any registration already made this epoch (the backend
+# keeps a camera's mapping fixed until reset). These match docs/LIVE_DEMO.md and
+# scripts/live_demo.py --prepare-only: phone-1, zone-b = (3, 2).
+
+camera:
+  index: 3                  # Continuity Camera; check with the ffmpeg list in cv/README.md
+  width: 1280
+  height: 720
+  fps: 30
+
+mapping:
+  mode: zones
+  frame_id: demo-floor-1
+  zones:
+    - id: zone-b
+      x_m: 3.0
+      y_m: 2.0
+      # image_polygon in normalized image coordinates (0..1, origin top-left).
+      # Omit it to make the whole frame zone-b. Split the frame to add zones, e.g.
+      # left half: [[0, 0], [0.5, 0], [0.5, 1], [0, 1]]
+      image_polygon: [[0, 0], [1, 0], [1, 1], [0, 1]]
+
+tracking:
+  zone_switch_frames: 5     # frames in a new zone before the reported zone changes
+
+publisher:
+  camera_id: phone-1

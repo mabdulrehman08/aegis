@@ -165,9 +165,16 @@ class Calibration:
     @classmethod
     def load(cls, path: str | Path) -> "Calibration":
         data = json.loads(Path(path).read_text(encoding="utf-8"))
+        try:
+            return cls.from_dict(data)
+        except CalibrationError as error:
+            raise CalibrationError(f"{path}: {error}") from None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Calibration":
         matrix = np.asarray(data["homography"], dtype=np.float64)
         if matrix.shape != (3, 3) or not np.all(np.isfinite(matrix)):
-            raise CalibrationError(f"{path}: homography must be a finite 3x3 matrix")
+            raise CalibrationError("homography must be a finite 3x3 matrix")
         return cls(
             homography=matrix, frame_id=str(data["frame_id"]),
             image_size=(int(data["image_size"][0]), int(data["image_size"][1])),

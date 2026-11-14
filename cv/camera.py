@@ -2,7 +2,9 @@
 
 A live camera that stops delivering frames is released and reopened every
 ``retry_interval_s``; ``read()`` returns ``None`` meanwhile. A file source is
-paced to its native FPS by default so time-based logic behaves as it would live.
+paced to its FPS by default (``fps_override``, e.g. the measured FPS from a
+recording's sidecar, wins over the container value) so time-based logic behaves
+as it would live. ``loop`` restarts a file at its end, keeping the pacing continuous.
 """
 
 from __future__ import annotations
@@ -29,10 +31,15 @@ class Camera:
     def __init__(self, settings: CameraSettings, source: str | None = None, *, pace: bool = True,
                  clock: Callable[[], float] = time.monotonic,
                  sleep: Callable[[float], None] = time.sleep,
-                 opener: Callable[[], Any] | None = None):
+                 opener: Callable[[], Any] | None = None,
+                 fps_override: float | None = None, loop: bool = False):
         self.settings = settings
         self.source = source
         self.pace = pace
+        self.fps_override = fps_override
+        self.loop = loop
+        self.loops = 0
+        self._frames_this_pass = 0
         self._clock = clock
         self._sleep = sleep
         self._opener = opener or self._open_cv
@@ -99,9 +106,14 @@ class Camera:
         if self.is_file:
             import cv2
 
-            fps = float(capture.get(cv2.CAP_PROP_FPS) or 0.0)
+            self._frames_this_pass = 0
+            fps = self.fps_override or float(capture.get(cv2.CAP_PROP_FPS) or 0.0)
             self._file_fps = fps if 1.0 <= fps <= 240.0 else 30.0
         return True
+
+    @property
+    def file_fps(self) -> float:
+        return self._file_fps
 
     def read(self) -> Frame | None:
         if self.finished:
@@ -132,10 +144,14 @@ class Camera:
                     now = self._clock()
             frame = Frame(image=image, t=now, index=self.index)
             self.index += 1
+            self._frames_this_pass += 1
             return frame
         if self.is_file:
-            self.status = "finished"
             self._release_capture()
+            if self.loop and self._frames_this_pass > 0 and self.open():
+                self.loops += 1
+                return None
+            self.status = "finished"
             return None
         if self._failing_since is None:
             self._failing_since = now

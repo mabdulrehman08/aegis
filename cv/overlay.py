@@ -9,6 +9,7 @@ import numpy as np
 
 from cv.homography import Calibration
 from cv.tracker import Track
+from cv.zones import ZoneMap
 
 GREEN = (80, 200, 80)
 ORANGE = (0, 165, 255)
@@ -41,6 +42,18 @@ def draw_calibration(image, calibration: Calibration | None) -> None:
         cv2.drawMarker(image, (int(u), int(v)), CYAN, cv2.MARKER_CROSS, 14, 2)
 
 
+def draw_zones(image, zone_map: ZoneMap | None) -> None:
+    if zone_map is None:
+        return
+    height, width = image.shape[:2]
+    for zone in zone_map.zones:
+        polygon = np.array([(u * (width - 1), v * (height - 1)) for u, v in zone.polygon], dtype=np.int32)
+        cv2.polylines(image, [polygon], True, CYAN, 2)
+        x, y = polygon.min(axis=0)
+        _text(image, f"{zone.zone_id} -> map ({zone.x_m:g}, {zone.y_m:g})",
+              (int(x) + 8, int(y) + 92), 0.5, CYAN)
+
+
 def draw_tracks(image, tracks: Sequence[Track], keypoint_min_conf: float = 0.5) -> None:
     for track in tracks:
         color = track_color(track)
@@ -54,10 +67,17 @@ def draw_tracks(image, tracks: Sequence[Track], keypoint_min_conf: float = 0.5) 
         if track.ground_px is not None:
             cv2.circle(image, (int(track.ground_px[0]), int(track.ground_px[1])), 5, CYAN, -1)
         seen = "" if track.detected else (" STALE" if track.stale else " unseen")
+        if track.zone_id is not None:
+            location = f"zone {track.zone_id} (estimate)"
+            if track.zone_candidate:
+                location += f" -> {track.zone_candidate}?"
+        elif track.published_xy:
+            location = f"({track.published_xy[0]:.2f}, {track.published_xy[1]:.2f}) m"
+        else:
+            location = "no floor position"
         lines = [
             f"{track.short_id} {track.state}{seen} {track.confidence_smoothed:.2f} {track.posture.label}",
-            (f"({track.published_xy[0]:.2f}, {track.published_xy[1]:.2f}) m"
-             if track.published_xy else "no floor position"),
+            location,
         ]
         for i, line in enumerate(lines):
             _text(image, line, (x1 + 3, y1 + 16 + 17 * i), 0.45, color)
