@@ -22,7 +22,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
@@ -30,6 +30,7 @@ from backend.app.models import (
     Assignment,
     Casualty,
     CVObservation,
+    CameraSigns,
     MedicalAssessment,
     Obstacle,
     OccupancyGrid,
@@ -47,10 +48,20 @@ from backend.app.simulation.models import (
     CameraProvenance,
     CameraRecord,
     CameraRegistration,
+    CasualtyIntelligence,
+    ComparisonSource,
     DecisionRequest,
     DispatchRequest,
     EventEnvelope,
     EventPage,
+    IntelligencePolicy,
+    IntelligencePolicyRequest,
+    IntelligenceSettings,
+    IntelligenceSnapshot,
+    LegacyThresholds,
+    ObjectiveTierView,
+    PreviousAssignmentOutcomeView,
+    ProposalReasoning,
     RecommendationState,
     ReplanRequest,
     RequiredCapabilitiesRequest,
@@ -63,6 +74,7 @@ from backend.app.simulation.models import (
     SimulationDispatch,
     SimulationProposal,
     SimulationState,
+    TemporalUncertainty,
     TrackRecord,
 )
 
@@ -76,6 +88,8 @@ MILESTONE_RANK = {"dispatched": 0, "delivered": 1, "acknowledged": 2, "completed
 MAX_IDEMPOTENCY_KEYS = 4096
 EXPLICIT_REPLAN_ATTEMPTS = 3
 CAMERA_PREFIX = "sim-camera:"
+POSITION_TOLERANCE_M = 0.25
+TEMPORAL_REASON_PREFIX = "temporal_gate:"
 
 
 class SimulationError(Exception):
@@ -103,6 +117,13 @@ def _utcnow() -> datetime:
 
 def _dump(model: BaseModel) -> dict[str, Any]:
     return model.model_dump(mode="json")
+
+
+_ViewT = TypeVar("_ViewT", bound=BaseModel)
+
+
+def _view(model: type[_ViewT], source: BaseModel) -> _ViewT:
+    return model.model_validate(source.model_dump())
 
 
 def _fingerprint(*parts: Any) -> str:
@@ -151,6 +172,8 @@ class _Track:
     count: int = 1
     casualty_id: str | None = None
     camera: CameraProvenance | None = None
+    latest_visible_signs: CameraSigns | None = None
+    signs_observed_at: datetime | None = None
 
 
 @dataclass
@@ -217,6 +240,9 @@ class _Session:
     cameras: dict[str, CameraRecord] = field(default_factory=dict)
     freshness_signature: tuple = ()
     last_recommendation: RecommendationState | None = None
+    intelligence_policy: IntelligencePolicy = field(default_factory=IntelligencePolicy)
+    previous_recommendations: list[Assignment] = field(default_factory=list)
+    previous_recommendation_proposal_id: str | None = None
 
     def next_id(self, kind: str) -> str:
         self.counters[kind] = self.counters.get(kind, 0) + 1
@@ -355,6 +381,190 @@ class SimulationStore:
                 "proposal_revision": proposal.revision, "proposal_status": proposal.status,
                 "explanation": _dump(explanation)}
 
+    def intelligence(self, scenario_id: str) -> IntelligenceSnapshot:
+        """Read-only temporal and objective diagnostics after the normal freshness tick."""
+        self.tick(scenario_id)
+        session = self._session(scenario_id)
+        with session.lock:
+            now = self._now()
+            policy = session.intelligence_policy
+            reports = self._temporal_reports(session, now, policy)
+            exclusions = self._temporal_exclusions(session, reports) if policy.temporal_gate else {}
+            active = {item.casualty_id: item.id for item in session.active_assignments()}
+            casualties = []
+            warnings = []
+            if policy.decay_gates_eligibility and not policy.temporal_gate:
+                warnings.append("decay_gates_eligibility changes diagnostics only while "
+                                "temporal_gate is off")
+            for casualty_id, report in reports.items():
+                track_id = session.casualty_tracks.get(casualty_id)
+                camera = session.tracks[track_id].camera if track_id is not None else None
+                zone = camera is not None and camera.location_basis == "zone_estimate"
+                notes = []
+                if casualty_id in active and not report.eligible_for_new_assignment:
+                    notes.append(f"active assignment {active[casualty_id]} is preserved; temporal "
+                                 f"reasons {', '.join(report.reasons)} gate new work only")
+                elif not report.eligible_for_new_assignment and not policy.temporal_gate:
+                    notes.append("temporal_gate is off: temporal reasons are diagnostic only; "
+                                 "legacy solver gates still apply")
+                if zone:
+                    notes.append(f"location is the registered reference point of zone "
+                                 f"{camera.zone_id} on camera {camera.camera_id}, not an observed "
+                                 "coordinate")
+                warnings.extend(f"{casualty_id}: {note}" for note in notes)
+                casualties.append(CasualtyIntelligence(
+                    casualty_id=casualty_id, track_id=track_id,
+                    camera=camera.model_copy() if camera is not None else None,
+                    zone_id=camera.zone_id if zone else None,
+                    zone_reference_position=report.last_reported_position if zone else None,
+                    active_assignment_id=active.get(casualty_id),
+                    uncertainty=_view(TemporalUncertainty, report),
+                    temporal_gate_applied=casualty_id in exclusions,
+                    exclusion_reasons=exclusions.get(casualty_id, []),
+                    warnings=notes,
+                ))
+            transitions = [report.next_transition_at for report in reports.values()
+                           if report.next_transition_at is not None]
+            return IntelligenceSnapshot(
+                scenario_id=session.scenario_id, epoch=session.epoch,
+                scene_revision=session.scene_revision, sequence=session.events.sequence,
+                map_revision=session.scene_map.revision if session.scene_map else None,
+                generated_at=now, policy=policy.model_copy(deep=True),
+                thresholds=LegacyThresholds(freshness_seconds=self.freshness_seconds,
+                                            min_confidence=self.min_confidence,
+                                            position_tolerance_m=POSITION_TOLERANCE_M),
+                casualties=casualties,
+                next_transition_at=min(transitions) if transitions else None,
+                source_valid_until=self._freshness_horizon(session, now),
+                previous_recommendations=self._stability_source(session),
+                previous_recommendation_proposal_id=(
+                    session.current_proposal_id
+                    if session.current_proposal_id is not None
+                    and session.proposals[session.current_proposal_id].status == "pending_approval"
+                    else session.previous_recommendation_proposal_id
+                    if session.current_proposal_id is None else None),
+                proposal=self._reasoning(session), warnings=warnings,
+            )
+
+    @staticmethod
+    def _reasoning(session: _Session) -> ProposalReasoning | None:
+        proposal_id = session.current_proposal_id or next(reversed(session.proposal_context), None)
+        if proposal_id is None:
+            return None
+        proposal = session.proposals[proposal_id]
+        _, result = session.proposal_context[proposal_id]
+        return ProposalReasoning(
+            proposal_id=proposal.id, proposal_revision=proposal.revision, status=proposal.status,
+            engine=result.engine, objective=result.metadata.objective,
+            objective_policy=getattr(result, "objective_policy", "distance_first"),
+            stability_budget_enforced=getattr(result, "stability_budget_enforced", False),
+            objective_tiers=[_view(ObjectiveTierView, tier)
+                             for tier in getattr(result, "objective_tiers", [])],
+            objective_values=dict(result.objective_values),
+            previous_assignment_outcomes=[
+                _view(PreviousAssignmentOutcomeView, outcome)
+                for outcome in getattr(result, "previous_assignment_outcomes", [])],
+            applied_assignment_exclusions={
+                key: list(value)
+                for key, value in getattr(result, "applied_assignment_exclusions", {}).items()},
+            unassigned_casualty_ids=list(proposal.unassigned_casualty_ids),
+            reasons={key: list(value) for key, value in proposal.reasons.items()},
+            rationale=list(proposal.rationale),
+        )
+
+    def set_intelligence_policy(self, scenario_id: str, request: IntelligencePolicyRequest,
+                                idempotency_key: str | None = None) -> ActionResponse:
+        """Replace the scenario's intelligence policy.
+
+        An actual change bumps the scene revision (superseding open proposals and
+        invalidating unconsumed approvals), emits
+        ``simulation.intelligence_policy_updated``, then runs the normal bounded
+        auto-replan. An identical policy is a duplicate with no effect.
+        """
+        session = self._session(scenario_id)
+        settings = IntelligenceSettings.model_validate(
+            request.model_dump(include=set(IntelligenceSettings.model_fields)))
+
+        def apply(now: datetime):
+            current = session.intelligence_policy
+            if current.settings() == settings:
+                return {"policy": _dump(current), "changed": False}, None, True
+            updated = IntelligencePolicy(**settings.model_dump(), version=current.version + 1,
+                                         updated_by=request.actor, updated_at=now)
+            session.intelligence_policy = updated
+            payload = {"policy": _dump(updated), "previous_policy": _dump(current),
+                       "actor": request.actor, "scene_revision": session.scene_revision + 1}
+            session.emit("simulation.intelligence_policy_updated", payload, now)
+            return {**payload, "changed": True}, f"intelligence_policy:{updated.version}", False
+
+        return self._run(session, "intelligence_policy", _dump(request), apply, idempotency_key)
+
+    def compare(self, scenario_id: str, request: Any) -> Any:
+        """Read-only counterfactuals on one captured request; installs nothing.
+
+        No tick runs here, so no sweep, event, revision, or proposal can occur
+        even when time already crossed a freshness boundary: the base request is
+        captured detached at the current instant with its horizon (never built
+        by ``_prepare``), the solver runs unlocked on detached copies, and the
+        result is labelled stale if the epoch or revision changed or
+        ``source_valid_until`` passed while solving.
+        """
+        from pydantic import ValidationError
+
+        from backend.app.simulation.comparisons import ComparisonReport
+        from optimization.analysis import (
+            AnalysisInputError, CounterfactualRequest, analyze_counterfactuals,
+        )
+
+        session = self._session(scenario_id)
+        with session.lock:
+            now = self._now()
+            policy = session.intelligence_policy
+            settings = request.policy or policy.settings()
+            base, _ = self._build_request(session, now, request.solver, settings)
+            horizons = [self._freshness_horizon(session, now)]
+            if settings.temporal_gate:
+                horizons.append(self._temporal_horizon(session, now, settings))
+            if settings.stability_preference:
+                horizons.extend(proposal.expires_at for proposal in session.proposals.values()
+                                if proposal.status in OPEN_PROPOSAL_STATUSES)
+            instants = [instant for instant in horizons if instant is not None]
+            valid_until = min(instants) if instants else None
+            source = ComparisonSource(
+                epoch=session.epoch, scene_revision=session.scene_revision,
+                sequence=session.events.sequence,
+                map_revision=session.scene_map.revision if session.scene_map else None,
+                captured_at=now, source_valid_until=valid_until, policy=settings,
+                policy_version=policy.version,
+                active_assignment_ids=sorted(item.id for item in session.active_assignments()),
+                previous_recommendation_proposal_id=session.previous_recommendation_proposal_id,
+            )
+        try:
+            counterfactual = CounterfactualRequest(base=base, scenarios=request.scenarios,
+                                                   expires_at=valid_until)
+            analysis = analyze_counterfactuals(counterfactual)
+        except (AnalysisInputError, ValidationError) as error:
+            raise _invalid(str(error)) from None
+        with session.lock:
+            evaluated = self._now()
+            stale = []
+            if session.epoch != source.epoch:
+                stale.append("epoch_changed")
+            if session.scene_revision != source.scene_revision:
+                stale.append("scene_revision_changed")
+            if valid_until is not None and evaluated >= valid_until:
+                stale.append("source_validity_horizon_reached")
+        return ComparisonReport(
+            scenario_id=scenario_id, source=source, evaluated_at=evaluated,
+            context="stale" if stale else "current", stale_reasons=stale, analysis=analysis)
+
+    def evaluations(self, scenario_id: str) -> Any:
+        """Committed synthetic evaluation artifacts; requires a loaded scenario."""
+        from backend.app.services.evaluation_reports import evaluation_index
+
+        self._session(scenario_id)
+        return evaluation_index()
+
 
     def _run(self, session: _Session, action: str, body: Any,
              apply: Callable[[datetime], tuple[dict[str, Any] | None, str | None, bool]],
@@ -438,6 +648,15 @@ class SimulationStore:
 
     def _close(self, session: _Session, proposal: SimulationProposal, status: str,
                reason: str, now: datetime) -> None:
+        """Close an open proposal. A still-unapproved one is kept as the
+        continuity source for opt-in stability; anything else clears it."""
+        if proposal.status == "pending_approval":
+            session.previous_recommendations = [
+                Assignment(casualty_id=item.casualty_id, responder_id=item.responder_id)
+                for item in proposal.assignments]
+            session.previous_recommendation_proposal_id = proposal.id
+        else:
+            self._forget_previous(session)
         proposal.status = status
         proposal.closed_reason = reason
         session.emit(f"simulation.proposal_{status}",
@@ -496,6 +715,12 @@ class SimulationStore:
         for casualty_id, assessed_at in self._future_assessments(session):
             signature.append(("assessment", casualty_id,
                               "future" if assessed_at > now else "effective"))
+        settings = session.intelligence_policy
+        if settings.temporal_gate:
+            exclusions = self._temporal_exclusions(
+                session, self._temporal_reports(session, now, settings))
+            signature.extend(("temporal", casualty_id, tuple(reasons))
+                             for casualty_id, reasons in exclusions.items())
         return tuple(signature)
 
     def _freshness_horizon(self, session: _Session, now: datetime) -> datetime | None:
@@ -508,12 +733,90 @@ class SimulationStore:
                 stamps.append(observation.track.last_seen_at)
             instants.extend(stamp + offset for stamp in stamps for offset in (timedelta(0), window))
         instants.extend(assessed_at for _, assessed_at in self._future_assessments(session))
+        if session.intelligence_policy.temporal_gate:
+            temporal = self._temporal_horizon(session, now, session.intelligence_policy)
+            if temporal is not None:
+                instants.append(temporal)
         upcoming = [instant for instant in instants if instant > now]
         return min(upcoming) if upcoming else None
 
+    @staticmethod
+    def _forget_previous(session: _Session) -> None:
+        session.previous_recommendations = []
+        session.previous_recommendation_proposal_id = None
 
-    def _prepare(self, session: _Session, now: datetime, trigger: str,
-                 solver_name: str | None = None) -> _SolverJob | None:
+    def _uncertainty_policy(self, settings: IntelligenceSettings) -> Any:
+        from backend.app.intelligence.uncertainty import UncertaintyPolicy
+
+        return UncertaintyPolicy(
+            freshness_seconds=self.freshness_seconds, min_confidence=self.min_confidence,
+            position_tolerance_m=POSITION_TOLERANCE_M,
+            confidence_half_life_seconds=settings.confidence_half_life_seconds,
+            decay_gates_eligibility=settings.decay_gates_eligibility,
+            allow_zone_estimates=settings.allow_zone_estimates,
+        )
+
+    def _temporal_reports(self, session: _Session, now: datetime,
+                          settings: IntelligenceSettings) -> dict[str, Any]:
+        """Pure temporal evaluation of every unresolved casualty; mutates nothing.
+
+        A casualty without an associated track is evaluated from its human-known
+        scenario position: absence of CV evidence is never inferred as unknown.
+        """
+        from backend.app.intelligence.uncertainty import evaluate_uncertainty
+
+        policy = self._uncertainty_policy(settings)
+        reports = {}
+        for casualty_id in sorted(session.casualties):
+            if casualty_id in session.resolved:
+                continue
+            track_id = session.casualty_tracks.get(casualty_id)
+            record = session.tracks.get(track_id) if track_id is not None else None
+            reports[casualty_id] = evaluate_uncertainty(
+                record.latest if record is not None else None, now, policy,
+                location_basis=record.camera.location_basis
+                if record is not None and record.camera is not None else None,
+                authoritative_position=session.casualties[casualty_id].position,
+            )
+        return reports
+
+    @staticmethod
+    def _temporal_exclusions(session: _Session, reports: dict[str, Any]) -> dict[str, list[str]]:
+        """Prefixed reasons for ineligible casualties without active work."""
+        active = {item.casualty_id for item in session.active_assignments()}
+        return {casualty_id: [f"{TEMPORAL_REASON_PREFIX}{reason}" for reason in report.reasons]
+                for casualty_id, report in sorted(reports.items())
+                if not report.eligible_for_new_assignment and casualty_id not in active}
+
+    def _temporal_horizon(self, session: _Session, now: datetime,
+                          settings: IntelligenceSettings) -> datetime | None:
+        """Earliest time-only change of a gate-relevant temporal reason."""
+        active = {item.casualty_id for item in session.active_assignments()}
+        instants = [report.next_transition_at
+                    for casualty_id, report in self._temporal_reports(session, now, settings).items()
+                    if casualty_id not in active and report.next_transition_at is not None
+                    and report.next_transition_at > now]
+        return min(instants) if instants else None
+
+    @staticmethod
+    def _stability_source(session: _Session) -> list[Assignment]:
+        """Previous UNAPPROVED recommendation: the open pending proposal if any,
+        otherwise the last pending proposal closed without a decision."""
+        current = session.proposals.get(session.current_proposal_id or "")
+        if current is not None and current.status == "pending_approval":
+            return [Assignment(casualty_id=item.casualty_id, responder_id=item.responder_id)
+                    for item in current.assignments]
+        if current is not None:
+            return []
+        return [item.model_copy(deep=True) for item in session.previous_recommendations]
+
+    def _build_request(self, session: _Session, now: datetime, solver_name: str | None,
+                       settings: IntelligenceSettings) -> tuple[Any, dict[str, CameraProvenance]]:
+        """Detached solver request for the current state. No events, no mutation.
+
+        Intelligence fields are set only when a setting is enabled, so the
+        default request is identical to the legacy one.
+        """
         from optimization.models import OptimizationRequest
 
         scenario = session.scenario(include_resolved=False)
@@ -525,6 +828,20 @@ class SimulationStore:
             casualty_id: session.tracks[track_id].latest.model_copy(deep=True)
             for casualty_id, track_id in session.casualty_tracks.items() if casualty_id in present
         }
+        extra: dict[str, Any] = {}
+        if settings.temporal_gate:
+            exclusions = self._temporal_exclusions(
+                session, self._temporal_reports(session, now, settings))
+            if exclusions:
+                extra["assignment_exclusions"] = exclusions
+        if settings.stability_preference:
+            extra["objective_policy"] = settings.objective_policy
+            if settings.stability_travel_budget_m is not None:
+                extra["stability_travel_budget_m"] = settings.stability_travel_budget_m
+            previous = [item for item in self._stability_source(session)
+                        if item.casualty_id in present and item.responder_id in session.responders]
+            if previous:
+                extra["previous_assignments"] = previous
         request = OptimizationRequest(
             scenario=scenario,
             required_capabilities={cid: list(tags) for cid, tags in session.required_capabilities.items()
@@ -533,16 +850,24 @@ class SimulationStore:
             scene_revision=session.scene_revision, now=now,
             solver=solver_name or self.solver_name,
             freshness_seconds=self.freshness_seconds, min_confidence=self.min_confidence,
+            **extra,
         )
-        session.emit("simulation.replan_requested",
-                     {"trigger": trigger, "scene_revision": session.scene_revision,
-                      "actor": "system" if not trigger.startswith("explicit:") else trigger[9:]},
-                     now)
         provenance = {
             casualty_id: session.tracks[track_id].camera.model_copy()
             for casualty_id, track_id in session.casualty_tracks.items()
             if casualty_id in present and session.tracks[track_id].camera is not None
         }
+        return request, provenance
+
+
+    def _prepare(self, session: _Session, now: datetime, trigger: str,
+                 solver_name: str | None = None) -> _SolverJob | None:
+        request, provenance = self._build_request(session, now, solver_name,
+                                                  session.intelligence_policy)
+        session.emit("simulation.replan_requested",
+                     {"trigger": trigger, "scene_revision": session.scene_revision,
+                      "actor": "system" if not trigger.startswith("explicit:") else trigger[9:]},
+                     now)
         return _SolverJob(session.epoch, session.scene_revision, trigger, request, now, provenance)
 
     def _execute(self, session: _Session, job: _SolverJob) -> SimulationProposal | RecommendationState | None:
@@ -698,6 +1023,8 @@ class SimulationStore:
             session.freshness_signature = ()
             session.current_proposal_id = None
             session.last_recommendation = None
+            session.intelligence_policy = IntelligencePolicy()
+            self._forget_previous(session)
             revision = session.scene_revision + 1
             session.emit("simulation.reset", {"epoch": session.epoch, "scene_revision": revision,
                                               "scenario": _dump(session.scenario())}, now)
@@ -782,7 +1109,7 @@ class SimulationStore:
             observation = CVObservation(
                 id=_camera_id(camera_id, body.id), source="cv", observed_at=body.observed_at,
                 position=position.model_copy(deep=True), kind="person_detected",
-                confidence=body.confidence, track=track,
+                confidence=body.confidence, track=track, signs=body.signs,
             )
             provenance = CameraProvenance(
                 camera_id=camera_id, local_observation_id=body.id,
@@ -835,6 +1162,9 @@ class SimulationStore:
                     raise _conflict(f"A {track.state} report must retain the last actual "
                                     "detection's position, confidence and last_seen_at")
                 record.latest = observation.model_copy(deep=True)
+                if observation.signs is not None:
+                    record.latest_visible_signs = observation.signs.model_copy(deep=True)
+                    record.signs_observed_at = observation.observed_at
                 record.count += 1
                 record.camera = provenance.model_copy() if provenance else None
                 casualty_id = record.casualty_id
@@ -852,7 +1182,9 @@ class SimulationStore:
             else:
                 session.tracks[track.track_id] = _Track(
                     track.track_id, observation.model_copy(deep=True),
-                    camera=provenance.model_copy() if provenance else None)
+                    camera=provenance.model_copy() if provenance else None,
+                    latest_visible_signs=observation.signs.model_copy(deep=True) if observation.signs else None,
+                    signs_observed_at=observation.observed_at if observation.signs else None)
         session.observation_fingerprints[observation.id] = fingerprint
         session.emit("simulation.observation_received",
                      {"observation": _dump(observation),
@@ -1078,6 +1410,7 @@ class SimulationStore:
             if request.decision == "reject":
                 proposal.closed_reason = f"rejected_by:{request.actor}"
                 session.current_proposal_id = None
+                self._forget_previous(session)
             session.emit("simulation.decision_recorded", _dump(approval), now)
             return _dump(approval), None, False
 
@@ -1140,6 +1473,7 @@ class SimulationStore:
             proposal.status = "dispatched"
             proposal.dispatch_id = dispatch.id
             session.current_proposal_id = None
+            self._forget_previous(session)
             result = {"dispatch": _dump(dispatch), "assignments": [_dump(r) for r in created]}
             session.emit("simulation.dispatch_created", result, now)
             return result, f"dispatch:{dispatch.id}", False
@@ -1251,7 +1585,9 @@ class SimulationStore:
         tracks = [TrackRecord(track_id=t.track_id, casualty_id=t.casualty_id,
                               latest_observation=t.latest.model_copy(deep=True),
                               observation_count=t.count,
-                              camera=t.camera.model_copy() if t.camera else None)
+                              camera=t.camera.model_copy() if t.camera else None,
+                              latest_visible_signs=t.latest_visible_signs.model_copy(deep=True) if t.latest_visible_signs else None,
+                              signs_observed_at=t.signs_observed_at)
                   for t in sorted(session.tracks.values(), key=lambda t: t.track_id)]
         return SimulationState(
             scenario_id=session.scenario_id, epoch=session.epoch,

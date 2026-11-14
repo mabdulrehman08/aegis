@@ -29,6 +29,7 @@ EVENT_TYPES = frozenset({
     "simulation.device_acknowledged",
     "simulation.device_completed",
     "simulation.responder_released",
+    "simulation.intelligence_policy_updated",
 })
 
 

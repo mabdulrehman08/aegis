@@ -1,0 +1,2702 @@
+{
+  "schema_version": "1.0",
+  "synthetic_only": true,
+  "fixed_now": "2026-11-13T12:00:00+00:00",
+  "advisory_only": true,
+  "authorizes_dispatch": false,
+  "cases": [
+    {
+      "id": "hypothetical-world-changes",
+      "title": "Responder, capability and obstacle counterfactuals",
+      "analysis": {
+        "scenario_id": "grid3",
+        "scene_revision": 1,
+        "map_revision": "map-1",
+        "generated_at": "2026-11-13T12:00:00Z",
+        "expires_at": "2026-11-13T12:05:00Z",
+        "expired": false,
+        "source_request_sha256": "4266d003119c62afabed840a22e63b1d4076d479dca817b0106919cb2df7d37c",
+        "baseline": {
+          "assignments": [
+            {
+              "casualty_id": "casualty-000",
+              "responder_id": "responder-001",
+              "route": {
+                "algorithm": "astar",
+                "map_revision": "map-1",
+                "waypoints": [
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 5.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 4.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 3.5,
+                    "y_m": 1.5
+                  }
+                ],
+                "distance_m": 2.0
+              }
+            },
+            {
+              "casualty_id": "casualty-001",
+              "responder_id": "responder-000",
+              "route": {
+                "algorithm": "astar",
+                "map_revision": "map-1",
+                "waypoints": [
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 2.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 3.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 4.5
+                  }
+                ],
+                "distance_m": 3.0
+              }
+            }
+          ],
+          "preserved_assignments": [],
+          "unassigned_casualty_ids": [
+            "casualty-002"
+          ],
+          "reasons": {
+            "casualty-000": [
+              "assigned_feasible_route"
+            ],
+            "casualty-001": [
+              "assigned_feasible_route"
+            ],
+            "casualty-002": [
+              "feasible_but_capacity_or_objective_limited"
+            ]
+          },
+          "metadata": {
+            "solver_name": "ortools",
+            "solver_version": "checkpoint-a-v1",
+            "generated_at": "2026-11-13T12:00:00Z",
+            "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+            "status": "partial",
+            "unassigned_casualty_ids": [
+              "casualty-002"
+            ],
+            "objective_value": 2.0
+          },
+          "scene_revision": 1,
+          "map_revision": "map-1",
+          "rationale": [
+            "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+            "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+          ],
+          "objective_values": {
+            "assigned_count": 2.0,
+            "new_assigned_count": 2.0,
+            "preserved_assigned_count": 0.0,
+            "allocation_priority_points": 3.0,
+            "new_travel_distance_m": 5.0,
+            "new_travel_cost_mm": 5000.0,
+            "feasible_pair_count": 6.0
+          },
+          "engine": "ortools",
+          "objective_policy": "distance_first",
+          "objective_tiers": [
+            {
+              "name": "new_assigned_count",
+              "direction": "maximize",
+              "value": 2.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "allocation_priority_points",
+              "direction": "maximize",
+              "value": 3.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "new_travel_cost_mm",
+              "direction": "minimize",
+              "value": 5000.0,
+              "proven_optimal": true
+            }
+          ],
+          "previous_assignment_outcomes": [],
+          "applied_assignment_exclusions": {},
+          "stability_budget_enforced": false
+        },
+        "scenarios": [
+          {
+            "scenario_id": "responder-000-offline",
+            "label": "Responder 000 goes offline",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "responder.status",
+                "entity_id": "responder-000",
+                "before": "available",
+                "after": "offline"
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      }
+                    ],
+                    "distance_m": 2.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-001",
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-001": [
+                  "feasible_but_capacity_or_objective_limited"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-001",
+                  "casualty-002"
+                ],
+                "objective_value": 1.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+              ],
+              "objective_values": {
+                "assigned_count": 1.0,
+                "new_assigned_count": 1.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 2.0,
+                "new_travel_distance_m": 2.0,
+                "new_travel_cost_mm": 2000.0,
+                "feasible_pair_count": 3.0
+              },
+              "engine": "ortools",
+              "objective_policy": "distance_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 2000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [
+              {
+                "casualty_id": "casualty-001",
+                "kind": "removed",
+                "base_responder_id": "responder-000",
+                "scenario_responder_id": null,
+                "base_distance_m": 3.0,
+                "scenario_distance_m": null
+              }
+            ],
+            "unchanged_assignment_count": 1,
+            "route_changes": [],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [
+              "casualty-001"
+            ],
+            "reason_changes": [
+              {
+                "casualty_id": "casualty-001",
+                "base_reasons": [
+                  "assigned_feasible_route"
+                ],
+                "scenario_reasons": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              }
+            ],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 1.0,
+                "delta": -1.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 2.0,
+                "delta": -1.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 2000.0,
+                "delta": -3000.0,
+                "comparable": true,
+                "outcome": "better",
+                "note": null
+              }
+            ],
+            "objective_verdict": "degraded",
+            "verdict_note": "First differing tier in policy order: new_assigned_count.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          },
+          {
+            "scenario_id": "lose-first-aid",
+            "label": "Responder 001 loses first_aid",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "responder.capabilities",
+                "entity_id": "responder-001",
+                "before": [
+                  "first_aid"
+                ],
+                "after": []
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      }
+                    ],
+                    "distance_m": 2.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-001",
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-001": [
+                  "feasible_but_capacity_or_objective_limited"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-001",
+                  "casualty-002"
+                ],
+                "objective_value": 1.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+              ],
+              "objective_values": {
+                "assigned_count": 1.0,
+                "new_assigned_count": 1.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 2.0,
+                "new_travel_distance_m": 2.0,
+                "new_travel_cost_mm": 2000.0,
+                "feasible_pair_count": 3.0
+              },
+              "engine": "ortools",
+              "objective_policy": "distance_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 2000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [
+              {
+                "casualty_id": "casualty-000",
+                "kind": "responder_changed",
+                "base_responder_id": "responder-001",
+                "scenario_responder_id": "responder-000",
+                "base_distance_m": 2.0,
+                "scenario_distance_m": 2.0
+              },
+              {
+                "casualty_id": "casualty-001",
+                "kind": "removed",
+                "base_responder_id": "responder-000",
+                "scenario_responder_id": null,
+                "base_distance_m": 3.0,
+                "scenario_distance_m": null
+              }
+            ],
+            "unchanged_assignment_count": 0,
+            "route_changes": [],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [
+              "casualty-001"
+            ],
+            "reason_changes": [
+              {
+                "casualty_id": "casualty-001",
+                "base_reasons": [
+                  "assigned_feasible_route"
+                ],
+                "scenario_reasons": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              }
+            ],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 1.0,
+                "delta": -1.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 2.0,
+                "delta": -1.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 2000.0,
+                "delta": -3000.0,
+                "comparable": true,
+                "outcome": "better",
+                "note": null
+              }
+            ],
+            "objective_verdict": "degraded",
+            "verdict_note": "First differing tier in policy order: new_assigned_count.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          },
+          {
+            "scenario_id": "casualty-000-blocked",
+            "label": "Debris blocks casualty 000",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "map.obstacle",
+                "entity_id": "debris",
+                "before": null,
+                "after": {
+                  "id": "debris",
+                  "vertices": [
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.2,
+                      "y_m": 1.2
+                    },
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.8,
+                      "y_m": 1.2
+                    },
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.8,
+                      "y_m": 1.8
+                    },
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.2,
+                      "y_m": 1.8
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "map.revision",
+                "entity_id": null,
+                "before": "map-1",
+                "after": "map-1+cf-casualty-000-blocked"
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-000",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1+cf-casualty-000-blocked",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 3.0
+                  }
+                },
+                {
+                  "casualty_id": "casualty-002",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1+cf-casualty-000-blocked",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 4.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 5.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 6.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 7.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 8.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 9.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 10.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 11.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 12.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 13.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 14.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 15.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 16.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 17.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 18.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 6.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 7.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 8.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 9.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 10.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 11.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 12.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 13.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 14.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 15.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 16.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 17.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 18.5,
+                        "y_m": 19.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 19.5,
+                        "y_m": 19.5
+                      }
+                    ],
+                    "distance_m": 32.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-000"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "unreachable"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "assigned_feasible_route"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-000"
+                ],
+                "objective_value": 2.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1+cf-casualty-000-blocked",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+              ],
+              "objective_values": {
+                "assigned_count": 2.0,
+                "new_assigned_count": 2.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 1.0,
+                "new_travel_distance_m": 35.0,
+                "new_travel_cost_mm": 35000.0,
+                "feasible_pair_count": 4.0
+              },
+              "engine": "ortools",
+              "objective_policy": "distance_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 35000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [
+              {
+                "casualty_id": "casualty-000",
+                "kind": "removed",
+                "base_responder_id": "responder-001",
+                "scenario_responder_id": null,
+                "base_distance_m": 2.0,
+                "scenario_distance_m": null
+              },
+              {
+                "casualty_id": "casualty-002",
+                "kind": "added",
+                "base_responder_id": null,
+                "scenario_responder_id": "responder-001",
+                "base_distance_m": null,
+                "scenario_distance_m": 32.0
+              }
+            ],
+            "unchanged_assignment_count": 1,
+            "route_changes": [
+              {
+                "casualty_id": "casualty-001",
+                "responder_id": "responder-000",
+                "base_map_revision": "map-1",
+                "scenario_map_revision": "map-1+cf-casualty-000-blocked",
+                "base_distance_m": 3.0,
+                "scenario_distance_m": 3.0,
+                "geometry_changed": false
+              }
+            ],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [
+              "casualty-002"
+            ],
+            "newly_unassigned_casualty_ids": [
+              "casualty-000"
+            ],
+            "reason_changes": [
+              {
+                "casualty_id": "casualty-000",
+                "base_reasons": [
+                  "assigned_feasible_route"
+                ],
+                "scenario_reasons": [
+                  "unreachable"
+                ]
+              },
+              {
+                "casualty_id": "casualty-002",
+                "base_reasons": [
+                  "feasible_but_capacity_or_objective_limited"
+                ],
+                "scenario_reasons": [
+                  "assigned_feasible_route"
+                ]
+              }
+            ],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 2.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 1.0,
+                "delta": -2.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 35000.0,
+                "delta": 30000.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              }
+            ],
+            "objective_verdict": "degraded",
+            "verdict_note": "First differing tier in policy order: allocation_priority_points.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1+cf-casualty-000-blocked",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          }
+        ],
+        "solver_calls": 4,
+        "max_solver_calls": 5,
+        "advisory_only": true,
+        "authorizes_dispatch": false,
+        "limitations": [
+          "Counterfactuals are hypothetical reruns of the real solver on explicitly changed copies of the source request; they do not predict the world, medical outcomes or responder behavior.",
+          "Approved or acknowledged active work is hard reserved and identical in every scenario; route staleness against a hypothetical map is reported, never silently rewritten.",
+          "Objective deltas compare measured tier values; a verdict is given only when both runs use the same objective policy, tier set and previous-assignment preferences.",
+          "Results carry no approval, dispatch authorization or clinical assessment and require human review.",
+          "Fallback or nearest engines make no optimality claim; engine and fallback use are reported per run."
+        ]
+      }
+    },
+    {
+      "id": "stability-policies",
+      "title": "Previous unapproved proposal vs objective policy",
+      "analysis": {
+        "scenario_id": "grid3",
+        "scene_revision": 1,
+        "map_revision": "map-1",
+        "generated_at": "2026-11-13T12:00:00Z",
+        "expires_at": "2026-11-13T12:05:00Z",
+        "expired": false,
+        "source_request_sha256": "3e57d6175c9afd36f9895539c7c8be56c31f0e9d569d65931d68f5213fba9655",
+        "baseline": {
+          "assignments": [
+            {
+              "casualty_id": "casualty-000",
+              "responder_id": "responder-001",
+              "route": {
+                "algorithm": "astar",
+                "map_revision": "map-1",
+                "waypoints": [
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 5.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 4.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 3.5,
+                    "y_m": 1.5
+                  }
+                ],
+                "distance_m": 2.0
+              }
+            },
+            {
+              "casualty_id": "casualty-001",
+              "responder_id": "responder-000",
+              "route": {
+                "algorithm": "astar",
+                "map_revision": "map-1",
+                "waypoints": [
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 2.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 3.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 4.5
+                  }
+                ],
+                "distance_m": 3.0
+              }
+            }
+          ],
+          "preserved_assignments": [],
+          "unassigned_casualty_ids": [
+            "casualty-002"
+          ],
+          "reasons": {
+            "casualty-000": [
+              "assigned_feasible_route"
+            ],
+            "casualty-001": [
+              "assigned_feasible_route"
+            ],
+            "casualty-002": [
+              "feasible_but_capacity_or_objective_limited"
+            ]
+          },
+          "metadata": {
+            "solver_name": "ortools",
+            "solver_version": "checkpoint-a-v1",
+            "generated_at": "2026-11-13T12:00:00Z",
+            "objective": "count_then_protected_human_urgency_then_travel_then_stability_then_ids_v2",
+            "status": "partial",
+            "unassigned_casualty_ids": [
+              "casualty-002"
+            ],
+            "objective_value": 2.0
+          },
+          "scene_revision": 1,
+          "map_revision": "map-1",
+          "rationale": [
+            "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+            "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+            "Stability policy distance_first: 0 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference."
+          ],
+          "objective_values": {
+            "assigned_count": 2.0,
+            "new_assigned_count": 2.0,
+            "preserved_assigned_count": 0.0,
+            "allocation_priority_points": 3.0,
+            "new_travel_distance_m": 5.0,
+            "new_travel_cost_mm": 5000.0,
+            "feasible_pair_count": 6.0
+          },
+          "engine": "ortools",
+          "objective_policy": "distance_first",
+          "objective_tiers": [
+            {
+              "name": "new_assigned_count",
+              "direction": "maximize",
+              "value": 2.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "allocation_priority_points",
+              "direction": "maximize",
+              "value": 3.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "new_travel_cost_mm",
+              "direction": "minimize",
+              "value": 5000.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "previous_assignment_changes",
+              "direction": "minimize",
+              "value": 2.0,
+              "proven_optimal": true
+            }
+          ],
+          "previous_assignment_outcomes": [
+            {
+              "casualty_id": "casualty-000",
+              "responder_id": "responder-000",
+              "outcome": "changed_responder",
+              "reasons": []
+            },
+            {
+              "casualty_id": "casualty-001",
+              "responder_id": "responder-001",
+              "outcome": "changed_responder",
+              "reasons": []
+            }
+          ],
+          "applied_assignment_exclusions": {},
+          "stability_budget_enforced": false
+        },
+        "scenarios": [
+          {
+            "scenario_id": "stability-first",
+            "label": "Prefer fewest changes before travel",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "objective_policy",
+                "entity_id": null,
+                "before": "distance_first",
+                "after": "stability_first"
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      }
+                    ],
+                    "distance_m": 2.0
+                  }
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 7.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_stability_then_travel_then_ids_v2",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-002"
+                ],
+                "objective_value": 2.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+                "Stability policy stability_first: 2 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference."
+              ],
+              "objective_values": {
+                "assigned_count": 2.0,
+                "new_assigned_count": 2.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 3.0,
+                "new_travel_distance_m": 9.0,
+                "new_travel_cost_mm": 9000.0,
+                "feasible_pair_count": 6.0
+              },
+              "engine": "ortools",
+              "objective_policy": "stability_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 3.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "previous_assignment_changes",
+                  "direction": "minimize",
+                  "value": 0.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 9000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "outcome": "retained",
+                  "reasons": []
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "outcome": "retained",
+                  "reasons": []
+                }
+              ],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [
+              {
+                "casualty_id": "casualty-000",
+                "kind": "responder_changed",
+                "base_responder_id": "responder-001",
+                "scenario_responder_id": "responder-000",
+                "base_distance_m": 2.0,
+                "scenario_distance_m": 2.0
+              },
+              {
+                "casualty_id": "casualty-001",
+                "kind": "responder_changed",
+                "base_responder_id": "responder-000",
+                "scenario_responder_id": "responder-001",
+                "base_distance_m": 3.0,
+                "scenario_distance_m": 7.0
+              }
+            ],
+            "unchanged_assignment_count": 0,
+            "route_changes": [],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [],
+            "reason_changes": [],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 2.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 3.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 9000.0,
+                "delta": 4000.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "previous_assignment_changes",
+                "direction": "minimize",
+                "base_value": 2.0,
+                "scenario_value": 0.0,
+                "delta": -2.0,
+                "comparable": true,
+                "outcome": "better",
+                "note": null
+              }
+            ],
+            "objective_verdict": "not_comparable",
+            "verdict_note": "Objective policy, budget, previous-assignment preferences or tier set differ, so a lexicographic verdict is not meaningful; per-tier measurements are listed separately.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          },
+          {
+            "scenario_id": "budget-zero",
+            "label": "Stability with zero extra travel",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "objective_policy",
+                "entity_id": null,
+                "before": "distance_first",
+                "after": "bounded_travel_stability"
+              },
+              {
+                "field": "stability_travel_budget_m",
+                "entity_id": null,
+                "before": null,
+                "after": 0.0
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      }
+                    ],
+                    "distance_m": 2.0
+                  }
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-000",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 3.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_bounded_stability_within_travel_budget_then_travel_then_ids_v2",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-002"
+                ],
+                "objective_value": 2.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+                "Stability policy bounded_travel_stability: 0 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference. Requested extra travel budget: 0.0 m; only a completed CP-SAT bounded-policy stage enforces it, in rounded millimeters."
+              ],
+              "objective_values": {
+                "assigned_count": 2.0,
+                "new_assigned_count": 2.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 3.0,
+                "new_travel_distance_m": 5.0,
+                "new_travel_cost_mm": 5000.0,
+                "feasible_pair_count": 6.0
+              },
+              "engine": "ortools",
+              "objective_policy": "bounded_travel_stability",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 3.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "previous_assignment_changes",
+                  "direction": "minimize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 5000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "outcome": "changed_responder",
+                  "reasons": []
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "outcome": "changed_responder",
+                  "reasons": []
+                }
+              ],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": true
+            },
+            "changed_assignments": [],
+            "unchanged_assignment_count": 2,
+            "route_changes": [],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [],
+            "reason_changes": [],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 2.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 3.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 5000.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "previous_assignment_changes",
+                "direction": "minimize",
+                "base_value": 2.0,
+                "scenario_value": 2.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              }
+            ],
+            "objective_verdict": "not_comparable",
+            "verdict_note": "Objective policy, budget, previous-assignment preferences or tier set differ, so a lexicographic verdict is not meaningful; per-tier measurements are listed separately.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          },
+          {
+            "scenario_id": "budget-ten",
+            "label": "Stability with 10 m extra travel budget",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "objective_policy",
+                "entity_id": null,
+                "before": "distance_first",
+                "after": "bounded_travel_stability"
+              },
+              {
+                "field": "stability_travel_budget_m",
+                "entity_id": null,
+                "before": null,
+                "after": 10.0
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      }
+                    ],
+                    "distance_m": 2.0
+                  }
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 7.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_bounded_stability_within_travel_budget_then_travel_then_ids_v2",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-002"
+                ],
+                "objective_value": 2.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+                "Stability policy bounded_travel_stability: 2 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference. Requested extra travel budget: 10.0 m; only a completed CP-SAT bounded-policy stage enforces it, in rounded millimeters."
+              ],
+              "objective_values": {
+                "assigned_count": 2.0,
+                "new_assigned_count": 2.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 3.0,
+                "new_travel_distance_m": 9.0,
+                "new_travel_cost_mm": 9000.0,
+                "feasible_pair_count": 6.0
+              },
+              "engine": "ortools",
+              "objective_policy": "bounded_travel_stability",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 3.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "previous_assignment_changes",
+                  "direction": "minimize",
+                  "value": 0.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 9000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "outcome": "retained",
+                  "reasons": []
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "outcome": "retained",
+                  "reasons": []
+                }
+              ],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": true
+            },
+            "changed_assignments": [
+              {
+                "casualty_id": "casualty-000",
+                "kind": "responder_changed",
+                "base_responder_id": "responder-001",
+                "scenario_responder_id": "responder-000",
+                "base_distance_m": 2.0,
+                "scenario_distance_m": 2.0
+              },
+              {
+                "casualty_id": "casualty-001",
+                "kind": "responder_changed",
+                "base_responder_id": "responder-000",
+                "scenario_responder_id": "responder-001",
+                "base_distance_m": 3.0,
+                "scenario_distance_m": 7.0
+              }
+            ],
+            "unchanged_assignment_count": 0,
+            "route_changes": [],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [],
+            "reason_changes": [],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 2.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 3.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 9000.0,
+                "delta": 4000.0,
+                "comparable": true,
+                "outcome": "worse",
+                "note": null
+              },
+              {
+                "name": "previous_assignment_changes",
+                "direction": "minimize",
+                "base_value": 2.0,
+                "scenario_value": 0.0,
+                "delta": -2.0,
+                "comparable": true,
+                "outcome": "better",
+                "note": null
+              }
+            ],
+            "objective_verdict": "not_comparable",
+            "verdict_note": "Objective policy, budget, previous-assignment preferences or tier set differ, so a lexicographic verdict is not meaningful; per-tier measurements are listed separately.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          },
+          {
+            "scenario_id": "forget-previous",
+            "label": "Discard previous preferences",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "previous_assignments",
+                "entity_id": null,
+                "before": [
+                  [
+                    "casualty-000",
+                    "responder-000"
+                  ],
+                  [
+                    "casualty-001",
+                    "responder-001"
+                  ]
+                ],
+                "after": []
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      }
+                    ],
+                    "distance_m": 2.0
+                  }
+                },
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-000",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 3.0
+                  }
+                }
+              ],
+              "preserved_assignments": [],
+              "unassigned_casualty_ids": [
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-002"
+                ],
+                "objective_value": 2.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+              ],
+              "objective_values": {
+                "assigned_count": 2.0,
+                "new_assigned_count": 2.0,
+                "preserved_assigned_count": 0.0,
+                "allocation_priority_points": 3.0,
+                "new_travel_distance_m": 5.0,
+                "new_travel_cost_mm": 5000.0,
+                "feasible_pair_count": 6.0
+              },
+              "engine": "ortools",
+              "objective_policy": "distance_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 2.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 3.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 5000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [],
+            "unchanged_assignment_count": 2,
+            "route_changes": [],
+            "preserved_assignments": [],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [],
+            "reason_changes": [],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 2.0,
+                "scenario_value": 2.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 3.0,
+                "scenario_value": 3.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 5000.0,
+                "scenario_value": 5000.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "previous_assignment_changes",
+                "direction": "minimize",
+                "base_value": 2.0,
+                "scenario_value": null,
+                "delta": null,
+                "comparable": false,
+                "outcome": "not_comparable",
+                "note": "Tier exists in only one run because its policy inputs differ."
+              }
+            ],
+            "objective_verdict": "not_comparable",
+            "verdict_note": "Objective policy, budget, previous-assignment preferences or tier set differ, so a lexicographic verdict is not meaningful; per-tier measurements are listed separately.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          }
+        ],
+        "solver_calls": 5,
+        "max_solver_calls": 5,
+        "advisory_only": true,
+        "authorizes_dispatch": false,
+        "limitations": [
+          "Counterfactuals are hypothetical reruns of the real solver on explicitly changed copies of the source request; they do not predict the world, medical outcomes or responder behavior.",
+          "Approved or acknowledged active work is hard reserved and identical in every scenario; route staleness against a hypothetical map is reported, never silently rewritten.",
+          "Objective deltas compare measured tier values; a verdict is given only when both runs use the same objective policy, tier set and previous-assignment preferences.",
+          "Results carry no approval, dispatch authorization or clinical assessment and require human review.",
+          "Fallback or nearest engines make no optimality claim; engine and fallback use are reported per run."
+        ]
+      }
+    },
+    {
+      "id": "active-work-preserved",
+      "title": "Hard-reserved approved work under hypothetical changes",
+      "analysis": {
+        "scenario_id": "grid3",
+        "scene_revision": 1,
+        "map_revision": "map-1",
+        "generated_at": "2026-11-13T12:00:00Z",
+        "expires_at": "2026-11-13T12:05:00Z",
+        "expired": false,
+        "source_request_sha256": "99ca0cc7a43880a0fb165daff90041b106f676a4c96c74bfec9e1d302372ccaa",
+        "baseline": {
+          "assignments": [
+            {
+              "casualty_id": "casualty-001",
+              "responder_id": "responder-001",
+              "route": {
+                "algorithm": "astar",
+                "map_revision": "map-1",
+                "waypoints": [
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 5.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 4.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 3.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 2.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 1.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 2.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 3.5
+                  },
+                  {
+                    "frame_id": "synthetic-grid",
+                    "x_m": 1.5,
+                    "y_m": 4.5
+                  }
+                ],
+                "distance_m": 7.0
+              }
+            }
+          ],
+          "preserved_assignments": [
+            {
+              "casualty_id": "casualty-000",
+              "responder_id": "responder-000",
+              "route": null
+            }
+          ],
+          "unassigned_casualty_ids": [
+            "casualty-002"
+          ],
+          "reasons": {
+            "casualty-000": [
+              "active_assignment_preserved",
+              "active_route_unverified"
+            ],
+            "casualty-001": [
+              "assigned_feasible_route"
+            ],
+            "casualty-002": [
+              "feasible_but_capacity_or_objective_limited"
+            ]
+          },
+          "metadata": {
+            "solver_name": "ortools",
+            "solver_version": "checkpoint-a-v1",
+            "generated_at": "2026-11-13T12:00:00Z",
+            "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+            "status": "partial",
+            "unassigned_casualty_ids": [
+              "casualty-002"
+            ],
+            "objective_value": 1.0
+          },
+          "scene_revision": 1,
+          "map_revision": "map-1",
+          "rationale": [
+            "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+            "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+            "Preserved casualty-000/responder-000 requires human route review: active_route_unverified. Historical approval is retained; the route is not silently replaced."
+          ],
+          "objective_values": {
+            "assigned_count": 1.0,
+            "new_assigned_count": 1.0,
+            "preserved_assigned_count": 1.0,
+            "allocation_priority_points": 1.0,
+            "new_travel_distance_m": 7.0,
+            "new_travel_cost_mm": 7000.0,
+            "feasible_pair_count": 2.0
+          },
+          "engine": "ortools",
+          "objective_policy": "distance_first",
+          "objective_tiers": [
+            {
+              "name": "new_assigned_count",
+              "direction": "maximize",
+              "value": 1.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "allocation_priority_points",
+              "direction": "maximize",
+              "value": 1.0,
+              "proven_optimal": true
+            },
+            {
+              "name": "new_travel_cost_mm",
+              "direction": "minimize",
+              "value": 7000.0,
+              "proven_optimal": true
+            }
+          ],
+          "previous_assignment_outcomes": [],
+          "applied_assignment_exclusions": {},
+          "stability_budget_enforced": false
+        },
+        "scenarios": [
+          {
+            "scenario_id": "active-responder-offline",
+            "label": "Active responder offline",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "responder.status",
+                "entity_id": "responder-000",
+                "before": "available",
+                "after": "offline"
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 7.0
+                  }
+                }
+              ],
+              "preserved_assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "route": null
+                }
+              ],
+              "unassigned_casualty_ids": [
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "active_assignment_preserved",
+                  "active_route_unverified"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-002"
+                ],
+                "objective_value": 1.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+                "Preserved casualty-000/responder-000 requires human route review: active_route_unverified. Historical approval is retained; the route is not silently replaced."
+              ],
+              "objective_values": {
+                "assigned_count": 1.0,
+                "new_assigned_count": 1.0,
+                "preserved_assigned_count": 1.0,
+                "allocation_priority_points": 1.0,
+                "new_travel_distance_m": 7.0,
+                "new_travel_cost_mm": 7000.0,
+                "feasible_pair_count": 2.0
+              },
+              "engine": "ortools",
+              "objective_policy": "distance_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 7000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [],
+            "unchanged_assignment_count": 1,
+            "route_changes": [],
+            "preserved_assignments": [
+              {
+                "casualty_id": "casualty-000",
+                "responder_id": "responder-000",
+                "route": null
+              }
+            ],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [],
+            "reason_changes": [],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 1.0,
+                "scenario_value": 1.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 1.0,
+                "scenario_value": 1.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 7000.0,
+                "scenario_value": 7000.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              }
+            ],
+            "objective_verdict": "unchanged",
+            "verdict_note": "All objective tiers are equal.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          },
+          {
+            "scenario_id": "debris-on-active",
+            "label": "Debris on the active casualty",
+            "hypothetical": true,
+            "assumption_differences": [
+              {
+                "field": "map.obstacle",
+                "entity_id": "debris",
+                "before": null,
+                "after": {
+                  "id": "debris",
+                  "vertices": [
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.2,
+                      "y_m": 1.2
+                    },
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.8,
+                      "y_m": 1.2
+                    },
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.8,
+                      "y_m": 1.8
+                    },
+                    {
+                      "frame_id": "synthetic-grid",
+                      "x_m": 3.2,
+                      "y_m": 1.8
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "map.revision",
+                "entity_id": null,
+                "before": "map-1",
+                "after": "map-1+cf-debris-on-active"
+              }
+            ],
+            "no_op": false,
+            "recommendation": {
+              "assignments": [
+                {
+                  "casualty_id": "casualty-001",
+                  "responder_id": "responder-001",
+                  "route": {
+                    "algorithm": "astar",
+                    "map_revision": "map-1+cf-debris-on-active",
+                    "waypoints": [
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 5.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 1.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 4.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 3.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 2.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 2.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 3.5
+                      },
+                      {
+                        "frame_id": "synthetic-grid",
+                        "x_m": 1.5,
+                        "y_m": 4.5
+                      }
+                    ],
+                    "distance_m": 7.0
+                  }
+                }
+              ],
+              "preserved_assignments": [
+                {
+                  "casualty_id": "casualty-000",
+                  "responder_id": "responder-000",
+                  "route": null
+                }
+              ],
+              "unassigned_casualty_ids": [
+                "casualty-002"
+              ],
+              "reasons": {
+                "casualty-000": [
+                  "active_assignment_preserved",
+                  "active_route_unverified"
+                ],
+                "casualty-001": [
+                  "assigned_feasible_route"
+                ],
+                "casualty-002": [
+                  "feasible_but_capacity_or_objective_limited"
+                ]
+              },
+              "metadata": {
+                "solver_name": "ortools",
+                "solver_version": "checkpoint-a-v1",
+                "generated_at": "2026-11-13T12:00:00Z",
+                "objective": "count_then_protected_human_urgency_then_travel_then_ids_v1",
+                "status": "partial",
+                "unassigned_casualty_ids": [
+                  "casualty-002"
+                ],
+                "objective_value": 1.0
+              },
+              "scene_revision": 1,
+              "map_revision": "map-1+cf-debris-on-active",
+              "rationale": [
+                "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+                "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+                "Preserved casualty-000/responder-000 requires human route review: active_route_unverified. Historical approval is retained; the route is not silently replaced."
+              ],
+              "objective_values": {
+                "assigned_count": 1.0,
+                "new_assigned_count": 1.0,
+                "preserved_assigned_count": 1.0,
+                "allocation_priority_points": 1.0,
+                "new_travel_distance_m": 7.0,
+                "new_travel_cost_mm": 7000.0,
+                "feasible_pair_count": 2.0
+              },
+              "engine": "ortools",
+              "objective_policy": "distance_first",
+              "objective_tiers": [
+                {
+                  "name": "new_assigned_count",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "allocation_priority_points",
+                  "direction": "maximize",
+                  "value": 1.0,
+                  "proven_optimal": true
+                },
+                {
+                  "name": "new_travel_cost_mm",
+                  "direction": "minimize",
+                  "value": 7000.0,
+                  "proven_optimal": true
+                }
+              ],
+              "previous_assignment_outcomes": [],
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
+            },
+            "changed_assignments": [],
+            "unchanged_assignment_count": 1,
+            "route_changes": [
+              {
+                "casualty_id": "casualty-001",
+                "responder_id": "responder-001",
+                "base_map_revision": "map-1",
+                "scenario_map_revision": "map-1+cf-debris-on-active",
+                "base_distance_m": 7.0,
+                "scenario_distance_m": 7.0,
+                "geometry_changed": true
+              }
+            ],
+            "preserved_assignments": [
+              {
+                "casualty_id": "casualty-000",
+                "responder_id": "responder-000",
+                "route": null
+              }
+            ],
+            "preserved_assignments_unchanged": true,
+            "newly_assigned_casualty_ids": [],
+            "newly_unassigned_casualty_ids": [],
+            "reason_changes": [],
+            "objective_deltas": [
+              {
+                "name": "new_assigned_count",
+                "direction": "maximize",
+                "base_value": 1.0,
+                "scenario_value": 1.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "allocation_priority_points",
+                "direction": "maximize",
+                "base_value": 1.0,
+                "scenario_value": 1.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              },
+              {
+                "name": "new_travel_cost_mm",
+                "direction": "minimize",
+                "base_value": 7000.0,
+                "scenario_value": 7000.0,
+                "delta": 0.0,
+                "comparable": true,
+                "outcome": "same",
+                "note": null
+              }
+            ],
+            "objective_verdict": "unchanged",
+            "verdict_note": "All objective tiers are equal.",
+            "requested_solver": "ortools",
+            "engine": "ortools",
+            "base_engine": "ortools",
+            "fallback_used": false,
+            "engine_matches_base": true,
+            "scene_revision": 1,
+            "map_revision": "map-1+cf-debris-on-active",
+            "expires_at": "2026-11-13T12:05:00Z",
+            "expired": false,
+            "authorizes_dispatch": false
+          }
+        ],
+        "solver_calls": 3,
+        "max_solver_calls": 5,
+        "advisory_only": true,
+        "authorizes_dispatch": false,
+        "limitations": [
+          "Counterfactuals are hypothetical reruns of the real solver on explicitly changed copies of the source request; they do not predict the world, medical outcomes or responder behavior.",
+          "Approved or acknowledged active work is hard reserved and identical in every scenario; route staleness against a hypothetical map is reported, never silently rewritten.",
+          "Objective deltas compare measured tier values; a verdict is given only when both runs use the same objective policy, tier set and previous-assignment preferences.",
+          "Results carry no approval, dispatch authorization or clinical assessment and require human review.",
+          "Fallback or nearest engines make no optimality claim; engine and fallback use are reported per run."
+        ]
+      }
+    }
+  ]
+}

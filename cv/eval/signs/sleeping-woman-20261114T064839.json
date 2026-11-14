@@ -1,0 +1,164 @@
+{
+  "run_at_utc": "2026-11-14T06:48:39.808Z",
+  "label": "sleeping-woman",
+  "source": "pexels-woman-sleeping-720.mp4",
+  "frames": 642,
+  "duration_s": 25.7,
+  "fps": 25.0,
+  "size": [
+    674,
+    1280
+  ],
+  "commands_at_s": [],
+  "expected": {
+    "eyes": "closed"
+  },
+  "main_track": "t2",
+  "tracks": {
+    "t2": {
+      "seen_s": 14.2,
+      "samples": 15,
+      "seen_from_s": 0.6,
+      "seen_to_s": 15.2,
+      "signs": {
+        "posture": {
+          "share_pct": {
+            "unknown": 53.3,
+            "lying": 26.7,
+            "sitting": 20.0
+          },
+          "first_at_s": {
+            "unknown": 0.6,
+            "lying": 2.6,
+            "sitting": 7.6
+          },
+          "changes": [
+            [
+              0.6,
+              "unknown"
+            ],
+            [
+              2.6,
+              "lying"
+            ],
+            [
+              3.6,
+              "unknown"
+            ],
+            [
+              5.6,
+              "lying"
+            ],
+            [
+              7.6,
+              "sitting"
+            ],
+            [
+              10.6,
+              "unknown"
+            ],
+            [
+              15.2,
+              "lying"
+            ]
+          ]
+        },
+        "movement": {
+          "share_pct": {
+            "moving": 93.3,
+            "not_testable": 6.7
+          },
+          "first_at_s": {
+            "not_testable": 0.6,
+            "moving": 1.6
+          },
+          "changes": [
+            [
+              0.6,
+              "not_testable"
+            ],
+            [
+              1.6,
+              "moving"
+            ]
+          ]
+        },
+        "response": {
+          "share_pct": {
+            "not_tested": 100.0
+          },
+          "first_at_s": {
+            "not_tested": 0.6
+          },
+          "changes": [
+            [
+              0.6,
+              "not_tested"
+            ]
+          ]
+        },
+        "eyes": {
+          "share_pct": {
+            "closed": 80.0,
+            "not_testable": 20.0
+          },
+          "first_at_s": {
+            "not_testable": 0.6,
+            "closed": 3.6
+          },
+          "changes": [
+            [
+              0.6,
+              "not_testable"
+            ],
+            [
+              3.6,
+              "closed"
+            ]
+          ],
+          "expected": "closed",
+          "agreement_pct": 80.0,
+          "agreement_testable_pct": 100.0,
+          "testable_pct": 80.0
+        },
+        "breathing": {
+          "share_pct": {
+            "not_testable": 100.0
+          },
+          "first_at_s": {
+            "not_testable": 0.6
+          },
+          "changes": [
+            [
+              0.6,
+              "not_testable"
+            ]
+          ]
+        },
+        "visible_blood": {
+          "share_pct": {
+            "not_detected": 93.3,
+            "not_testable": 6.7
+          },
+          "first_at_s": {
+            "not_testable": 0.6,
+            "not_detected": 1.6
+          },
+          "changes": [
+            [
+              0.6,
+              "not_testable"
+            ],
+            [
+              1.6,
+              "not_detected"
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "tracks_ignored": 2,
+  "eye_model_available": true,
+  "processing_fps": 60.6
+}
