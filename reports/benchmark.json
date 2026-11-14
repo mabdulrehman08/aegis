@@ -1,0 +1,1778 @@
+{
+  "schema_version": "1.0",
+  "synthetic_only": true,
+  "seeds": [
+    7,
+    19,
+    41,
+    83,
+    127
+  ],
+  "fixed_now": "2026-11-13T12:00:00+00:00",
+  "python": "3.13.11",
+  "generated_at_utc": "2026-11-14T04:14:39.014262+00:00",
+  "platform": "macOS-26.7.2-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "ortools_version": "9.15.6755",
+  "timing_policy": "One measured call per input/solver; first OR-Tools call includes cold import. No warmup or averaging.",
+  "input_sha256": {
+    "grid3": "699e772a56b70a6a172e49350504d2e92ca34aec100e2c1c313757fe2f06a922",
+    "seed-7": "f32fa6f3c0befde4ea8a04c37493481840ba3b305b26a8d5152870e16f9b34fa",
+    "seed-19": "8f68aba6657b835ee0e56c453acaca5123ef8f5d158121405d590ca0680cb9dd",
+    "seed-41": "98e8cbbf583b8f990a1c08aac8c92759bd60666be2a913b2dff5010f6c96a682",
+    "seed-83": "76f4ef9de5d7105dd029a92f635a6179b94f8b42fadc19420e3f92c8905c65bf",
+    "seed-127": "ca23eec81834b4ccd7eee21b059cf89a0ba1d44ab45abaf49b73ded5062b19c4"
+  },
+  "runs": [
+    {
+      "scenario": "grid3",
+      "phase": "initial",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "cafee5e8d3c6a5c9464ee178cbd2200caa5cc45e761328e4a7e1066643f6aaf2",
+      "engine": "nearest",
+      "assignments": 2,
+      "existing_assignments": 0,
+      "new_assignments": 2,
+      "preserved_route_review_warnings": [],
+      "unassigned": 1,
+      "unassigned_casualty_ids": [
+        "casualty-002"
+      ],
+      "distance_m": 9.0,
+      "new_distance_m": 9.0,
+      "constraint_violations": 0,
+      "runtime_ms": 0.9004169842228293,
+      "wall_runtime_ms": 0.9105000062845647,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 2.0,
+        "new_assigned_count": 2.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 3.0,
+        "new_travel_distance_m": 9.0,
+        "new_travel_cost_mm": 9000.0,
+        "feasible_pair_count": 6.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "feasible_but_capacity_or_objective_limited"
+        ]
+      }
+    },
+    {
+      "scenario": "grid3",
+      "phase": "initial",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "cafee5e8d3c6a5c9464ee178cbd2200caa5cc45e761328e4a7e1066643f6aaf2",
+      "engine": "ortools",
+      "assignments": 2,
+      "existing_assignments": 0,
+      "new_assignments": 2,
+      "preserved_route_review_warnings": [],
+      "unassigned": 1,
+      "unassigned_casualty_ids": [
+        "casualty-002"
+      ],
+      "distance_m": 5.0,
+      "new_distance_m": 5.0,
+      "constraint_violations": 0,
+      "runtime_ms": 154.97458400204778,
+      "wall_runtime_ms": 154.99187502427958,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 2.0,
+        "new_assigned_count": 2.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 3.0,
+        "new_travel_distance_m": 5.0,
+        "new_travel_cost_mm": 5000.0,
+        "feasible_pair_count": 6.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "feasible_but_capacity_or_objective_limited"
+        ]
+      }
+    },
+    {
+      "scenario": "grid3",
+      "phase": "replan",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "2e44023530b0c9b39d6c59ab8d57590d59ec506b8faa020f9453d28eedca113d",
+      "engine": "nearest",
+      "assignments": 0,
+      "existing_assignments": 1,
+      "new_assignments": 0,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-001",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 2,
+      "unassigned_casualty_ids": [
+        "casualty-001",
+        "casualty-002"
+      ],
+      "distance_m": 0,
+      "new_distance_m": 0,
+      "constraint_violations": 0,
+      "runtime_ms": 0.04508401616476476,
+      "wall_runtime_ms": 0.04979199729859829,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 0.0,
+        "new_assigned_count": 0.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 0.0,
+        "new_travel_distance_m": 0.0,
+        "new_travel_cost_mm": 0.0,
+        "feasible_pair_count": 0.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-001 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "responder_reserved_active",
+          "responder_unavailable"
+        ],
+        "casualty-002": [
+          "responder_reserved_active",
+          "responder_unavailable"
+        ]
+      }
+    },
+    {
+      "scenario": "grid3",
+      "phase": "replan",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "2e44023530b0c9b39d6c59ab8d57590d59ec506b8faa020f9453d28eedca113d",
+      "engine": "ortools",
+      "assignments": 0,
+      "existing_assignments": 1,
+      "new_assignments": 0,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-001",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 2,
+      "unassigned_casualty_ids": [
+        "casualty-001",
+        "casualty-002"
+      ],
+      "distance_m": 0,
+      "new_distance_m": 0,
+      "constraint_violations": 0,
+      "runtime_ms": 0.03766699228435755,
+      "wall_runtime_ms": 0.04099999205209315,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 0.0,
+        "new_assigned_count": 0.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 0.0,
+        "new_travel_distance_m": 0.0,
+        "new_travel_cost_mm": 0.0,
+        "feasible_pair_count": 0.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-001 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Candidate graph is empty; no CP-SAT solve was necessary."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "responder_reserved_active",
+          "responder_unavailable"
+        ],
+        "casualty-002": [
+          "responder_reserved_active",
+          "responder_unavailable"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-7",
+      "phase": "initial",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "4e0b1d91a780d1100ab6f71944564fb70b42f0b09b1501eceff14713fef045f8",
+      "engine": "nearest",
+      "assignments": 5,
+      "existing_assignments": 0,
+      "new_assignments": 5,
+      "preserved_route_review_warnings": [],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-000",
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 58.0,
+      "new_distance_m": 58.0,
+      "constraint_violations": 0,
+      "runtime_ms": 2.7409579779487103,
+      "wall_runtime_ms": 2.7722079830709845,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 5.0,
+        "new_assigned_count": 5.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 7.0,
+        "new_travel_distance_m": 58.0,
+        "new_travel_cost_mm": 58000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-7",
+      "phase": "initial",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "4e0b1d91a780d1100ab6f71944564fb70b42f0b09b1501eceff14713fef045f8",
+      "engine": "ortools",
+      "assignments": 6,
+      "existing_assignments": 0,
+      "new_assignments": 6,
+      "preserved_route_review_warnings": [],
+      "unassigned": 4,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 70.0,
+      "new_distance_m": 70.0,
+      "constraint_violations": 0,
+      "runtime_ms": 7.819916994776577,
+      "wall_runtime_ms": 7.858166994992644,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 6.0,
+        "new_assigned_count": 6.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 9.0,
+        "new_travel_distance_m": 70.0,
+        "new_travel_cost_mm": 70000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-7",
+      "phase": "replan",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "c31cd0b53fd233ce54c548b91df54357e6e175e9f90adb43d0a54e382cd66cfa",
+      "engine": "nearest",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-000",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-005",
+        "casualty-006"
+      ],
+      "distance_m": 29.0,
+      "new_distance_m": 29.0,
+      "constraint_violations": 0,
+      "runtime_ms": 1.5701250231359154,
+      "wall_runtime_ms": 1.58937499509193,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 29.0,
+        "new_travel_cost_mm": 29000.0,
+        "feasible_pair_count": 18.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-000 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-7",
+      "phase": "replan",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "c31cd0b53fd233ce54c548b91df54357e6e175e9f90adb43d0a54e382cd66cfa",
+      "engine": "ortools",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-000",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-007"
+      ],
+      "distance_m": 47.0,
+      "new_distance_m": 47.0,
+      "constraint_violations": 0,
+      "runtime_ms": 4.457333008758724,
+      "wall_runtime_ms": 4.480292001971975,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 7.0,
+        "new_travel_distance_m": 47.0,
+        "new_travel_cost_mm": 47000.0,
+        "feasible_pair_count": 18.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-000 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-19",
+      "phase": "initial",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "7ab16ff1217c342f6d8024b809ba2a47e82d7a160f6e20905698d3c65e87380a",
+      "engine": "nearest",
+      "assignments": 5,
+      "existing_assignments": 0,
+      "new_assignments": 5,
+      "preserved_route_review_warnings": [],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 51.0,
+      "new_distance_m": 51.0,
+      "constraint_violations": 0,
+      "runtime_ms": 3.2218330015894026,
+      "wall_runtime_ms": 3.2523749978281558,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 5.0,
+        "new_assigned_count": 5.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 7.0,
+        "new_travel_distance_m": 51.0,
+        "new_travel_cost_mm": 51000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "feasible_but_capacity_or_objective_limited"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-19",
+      "phase": "initial",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "7ab16ff1217c342f6d8024b809ba2a47e82d7a160f6e20905698d3c65e87380a",
+      "engine": "ortools",
+      "assignments": 6,
+      "existing_assignments": 0,
+      "new_assignments": 6,
+      "preserved_route_review_warnings": [],
+      "unassigned": 4,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 66.0,
+      "new_distance_m": 66.0,
+      "constraint_violations": 0,
+      "runtime_ms": 8.463207981549203,
+      "wall_runtime_ms": 8.502624987158924,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 6.0,
+        "new_assigned_count": 6.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 9.0,
+        "new_travel_distance_m": 66.0,
+        "new_travel_cost_mm": 66000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-19",
+      "phase": "replan",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "143a39a5664e3e5630670746dcc2d3f32a43ea6697b8b6fc6de3134b4463e92f",
+      "engine": "nearest",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-003",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 49.0,
+      "new_distance_m": 49.0,
+      "constraint_violations": 0,
+      "runtime_ms": 1.7822499794419855,
+      "wall_runtime_ms": 1.8026249890681356,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 49.0,
+        "new_travel_cost_mm": 49000.0,
+        "feasible_pair_count": 16.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-003 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-19",
+      "phase": "replan",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "143a39a5664e3e5630670746dcc2d3f32a43ea6697b8b6fc6de3134b4463e92f",
+      "engine": "ortools",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-003",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 49.0,
+      "new_distance_m": 49.0,
+      "constraint_violations": 0,
+      "runtime_ms": 4.4350420066621155,
+      "wall_runtime_ms": 4.457666975213215,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 49.0,
+        "new_travel_cost_mm": 49000.0,
+        "feasible_pair_count": 16.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-003 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-41",
+      "phase": "initial",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "f00d8394e81a7f2282d2fd4a304b15841d60687ee078161251220f7909f823a3",
+      "engine": "nearest",
+      "assignments": 5,
+      "existing_assignments": 0,
+      "new_assignments": 5,
+      "preserved_route_review_warnings": [],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-000",
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-009"
+      ],
+      "distance_m": 46.0,
+      "new_distance_m": 46.0,
+      "constraint_violations": 0,
+      "runtime_ms": 3.895000001648441,
+      "wall_runtime_ms": 3.93895898014307,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 5.0,
+        "new_assigned_count": 5.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 6.0,
+        "new_travel_distance_m": 46.0,
+        "new_travel_cost_mm": 46000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "assigned_feasible_route"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "feasible_but_capacity_or_objective_limited"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-41",
+      "phase": "initial",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "f00d8394e81a7f2282d2fd4a304b15841d60687ee078161251220f7909f823a3",
+      "engine": "ortools",
+      "assignments": 6,
+      "existing_assignments": 0,
+      "new_assignments": 6,
+      "preserved_route_review_warnings": [],
+      "unassigned": 4,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 94.0,
+      "new_distance_m": 94.0,
+      "constraint_violations": 0,
+      "runtime_ms": 9.542582993162796,
+      "wall_runtime_ms": 9.578458993928507,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 6.0,
+        "new_assigned_count": 6.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 9.0,
+        "new_travel_distance_m": 94.0,
+        "new_travel_cost_mm": 94000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-41",
+      "phase": "replan",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "d77dae390e3c43f61c7384256c35509cf339cdb5dd2de1498f9dceebcad481f9",
+      "engine": "nearest",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-000",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 46.0,
+      "new_distance_m": 46.0,
+      "constraint_violations": 0,
+      "runtime_ms": 2.6406249962747097,
+      "wall_runtime_ms": 2.6636669936124235,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 46.0,
+        "new_travel_cost_mm": 46000.0,
+        "feasible_pair_count": 18.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-000 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "feasible_but_capacity_or_objective_limited"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-41",
+      "phase": "replan",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "d77dae390e3c43f61c7384256c35509cf339cdb5dd2de1498f9dceebcad481f9",
+      "engine": "ortools",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-000",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-007"
+      ],
+      "distance_m": 53.0,
+      "new_distance_m": 53.0,
+      "constraint_violations": 0,
+      "runtime_ms": 5.2491249807644635,
+      "wall_runtime_ms": 5.276957992464304,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 7.0,
+        "new_travel_distance_m": 53.0,
+        "new_travel_cost_mm": 53000.0,
+        "feasible_pair_count": 18.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-000 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-83",
+      "phase": "initial",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "1f0a9e690a1debac1fad864c450cce63debebf1137124e443490f411d9a20bf9",
+      "engine": "nearest",
+      "assignments": 4,
+      "existing_assignments": 0,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [],
+      "unassigned": 6,
+      "unassigned_casualty_ids": [
+        "casualty-000",
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 40.0,
+      "new_distance_m": 40.0,
+      "constraint_violations": 0,
+      "runtime_ms": 3.005000005941838,
+      "wall_runtime_ms": 3.0367499857675284,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 40.0,
+        "new_travel_cost_mm": 40000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "feasible_but_capacity_or_objective_limited"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-83",
+      "phase": "initial",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "1f0a9e690a1debac1fad864c450cce63debebf1137124e443490f411d9a20bf9",
+      "engine": "ortools",
+      "assignments": 6,
+      "existing_assignments": 0,
+      "new_assignments": 6,
+      "preserved_route_review_warnings": [],
+      "unassigned": 4,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 90.0,
+      "new_distance_m": 90.0,
+      "constraint_violations": 0,
+      "runtime_ms": 9.117333014728501,
+      "wall_runtime_ms": 9.150625002803281,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 6.0,
+        "new_assigned_count": 6.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 9.0,
+        "new_travel_distance_m": 90.0,
+        "new_travel_cost_mm": 90000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-83",
+      "phase": "replan",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "bf5c2a50d54de9b8774268fe087e6bb3be7bd6d48dc4d607f9160e33e0a8147b",
+      "engine": "nearest",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-003",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 53.0,
+      "new_distance_m": 53.0,
+      "constraint_violations": 0,
+      "runtime_ms": 1.7932500049937516,
+      "wall_runtime_ms": 1.8141250184271485,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 53.0,
+        "new_travel_cost_mm": 53000.0,
+        "feasible_pair_count": 16.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-003 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-83",
+      "phase": "replan",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "bf5c2a50d54de9b8774268fe087e6bb3be7bd6d48dc4d607f9160e33e0a8147b",
+      "engine": "ortools",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-003",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-009"
+      ],
+      "distance_m": 53.0,
+      "new_distance_m": 53.0,
+      "constraint_violations": 0,
+      "runtime_ms": 4.946417000610381,
+      "wall_runtime_ms": 4.9780000117607415,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 53.0,
+        "new_travel_cost_mm": 53000.0,
+        "feasible_pair_count": 16.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-003 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "required_capabilities_missing",
+          "responder_reserved_active",
+          "responder_unavailable"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-127",
+      "phase": "initial",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "7b8d0a3c1dc8505355e9d8b850af29912ec6568644597ca416226626a01fb410",
+      "engine": "nearest",
+      "assignments": 6,
+      "existing_assignments": 0,
+      "new_assignments": 6,
+      "preserved_route_review_warnings": [],
+      "unassigned": 4,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 68.0,
+      "new_distance_m": 68.0,
+      "constraint_violations": 0,
+      "runtime_ms": 2.5980409991461784,
+      "wall_runtime_ms": 2.6257080025970936,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 6.0,
+        "new_assigned_count": 6.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 9.0,
+        "new_travel_distance_m": 68.0,
+        "new_travel_cost_mm": 68000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-127",
+      "phase": "initial",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "7b8d0a3c1dc8505355e9d8b850af29912ec6568644597ca416226626a01fb410",
+      "engine": "ortools",
+      "assignments": 6,
+      "existing_assignments": 0,
+      "new_assignments": 6,
+      "preserved_route_review_warnings": [],
+      "unassigned": 4,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006"
+      ],
+      "distance_m": 66.0,
+      "new_distance_m": 66.0,
+      "constraint_violations": 0,
+      "runtime_ms": 7.6289999997243285,
+      "wall_runtime_ms": 7.663583004614338,
+      "scene_revision": 1,
+      "map_revision": "map-1",
+      "objective_values": {
+        "assigned_count": 6.0,
+        "new_assigned_count": 6.0,
+        "preserved_assigned_count": 0.0,
+        "allocation_priority_points": 9.0,
+        "new_travel_distance_m": 66.0,
+        "new_travel_cost_mm": 66000.0,
+        "feasible_pair_count": 30.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "assigned_feasible_route"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-127",
+      "phase": "replan",
+      "solver": "nearest",
+      "input_sha256_excluding_solver": "743706ebeac75d0c6aaed9ca372fc69536e7cf25fb927544c3f8ff434b1d4f05",
+      "engine": "nearest",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-000",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-008"
+      ],
+      "distance_m": 29.0,
+      "new_distance_m": 29.0,
+      "constraint_violations": 0,
+      "runtime_ms": 1.4477499935310334,
+      "wall_runtime_ms": 1.4674999983981252,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 5.0,
+        "new_travel_distance_m": 29.0,
+        "new_travel_cost_mm": 29000.0,
+        "feasible_pair_count": 18.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-000 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced.",
+        "Nearest baseline greedily selects shortest feasible pairs; it does not guarantee maximum count, urgency, or minimum total travel."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "assigned_feasible_route"
+        ],
+        "casualty-008": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    },
+    {
+      "scenario": "seed-127",
+      "phase": "replan",
+      "solver": "ortools",
+      "input_sha256_excluding_solver": "743706ebeac75d0c6aaed9ca372fc69536e7cf25fb927544c3f8ff434b1d4f05",
+      "engine": "ortools",
+      "assignments": 4,
+      "existing_assignments": 1,
+      "new_assignments": 4,
+      "preserved_route_review_warnings": [
+        {
+          "casualty_id": "casualty-000",
+          "responder_id": "responder-000",
+          "reason": "historical_route_requires_review"
+        }
+      ],
+      "unassigned": 5,
+      "unassigned_casualty_ids": [
+        "casualty-002",
+        "casualty-003",
+        "casualty-004",
+        "casualty-006",
+        "casualty-007"
+      ],
+      "distance_m": 31.0,
+      "new_distance_m": 31.0,
+      "constraint_violations": 0,
+      "runtime_ms": 3.574250004021451,
+      "wall_runtime_ms": 3.5960829991381615,
+      "scene_revision": 2,
+      "map_revision": "map-2",
+      "objective_values": {
+        "assigned_count": 4.0,
+        "new_assigned_count": 4.0,
+        "preserved_assigned_count": 1.0,
+        "allocation_priority_points": 7.0,
+        "new_travel_distance_m": 31.0,
+        "new_travel_cost_mm": 31000.0,
+        "feasible_pair_count": 18.0
+      },
+      "rationale": [
+        "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
+        "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
+        "Preserved casualty-000/responder-000 requires human route review: active_route_stale_map. Historical approval is retained; the route is not silently replaced."
+      ],
+      "reasons": {
+        "casualty-000": [
+          "active_assignment_preserved",
+          "active_route_stale_map"
+        ],
+        "casualty-001": [
+          "assigned_feasible_route"
+        ],
+        "casualty-002": [
+          "observation_stale",
+          "track_stale"
+        ],
+        "casualty-003": [
+          "observation_low_confidence"
+        ],
+        "casualty-004": [
+          "track_lost"
+        ],
+        "casualty-005": [
+          "assigned_feasible_route"
+        ],
+        "casualty-006": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-007": [
+          "feasible_but_capacity_or_objective_limited"
+        ],
+        "casualty-008": [
+          "assigned_feasible_route"
+        ],
+        "casualty-009": [
+          "assigned_feasible_route"
+        ]
+      }
+    }
+  ]
+}
