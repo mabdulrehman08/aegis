@@ -36,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--camera", type=int, help="camera index (overrides config)")
     parser.add_argument("--camera-id", help="camera ID stored with the recording (overrides config)")
+    parser.add_argument("--homography", help="calibration to store with the recording (overrides config)")
     parser.add_argument("--scenario", default="unlabeled", help="label, also used in the file name")
     parser.add_argument("--duration", type=float, default=30.0, help="seconds to record (0 = until q)")
     parser.add_argument("--countdown", type=float, default=0.0,
@@ -46,13 +47,13 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def mapping_info(settings) -> dict:
+def mapping_info(settings, homography: str | None = None) -> dict:
     mapping = settings.mapping
     info = {"mode": mapping.mode, "frame_id": mapping.frame_id, "calibration": None, "zones": None}
     if mapping.mode == "zones":
         info["zones"] = list(mapping.zones)
         return info
-    path = resolve(mapping.homography)
+    path = Path(homography) if homography else resolve(mapping.homography)
     if path.exists():
         from cv.homography import Calibration
 
@@ -74,7 +75,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     output = Path(args.output) if args.output else (
         CV_DIR / "recordings" / f"{args.scenario}-{started_wall.strftime('%Y%m%dT%H%M%SZ')}.mp4")
     output.parent.mkdir(parents=True, exist_ok=True)
-    mapping = mapping_info(settings)
+    mapping = mapping_info(settings, args.homography)
 
     camera = Camera(settings.camera)
     writer = None

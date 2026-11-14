@@ -1,0 +1,21 @@
+# Ground truth for one staged clip, scored by cv.tools.evaluate.
+# Copy per scenario (e.g. lying_two.yaml) and replace the example values with
+# tape-measured positions in the scene frame: the same coordinates, including
+# the --offset, that were used for the calibration. People stay in place for
+# the whole clip. Synthetic staging only: no real casualty data.
+#
+#   python -m cv.tools.evaluate --source cv/recordings/<clip>.mp4 \
+#       --truth cv/eval/truth/<scenario>.yaml
+
+scenario: example_lying_two
+frame_id: demo-floor-1
+match_radius_m: 1.0          # a track farther than this from everyone counts as a false positive
+people:
+  - id: A
+    x_m: 13.0                # where the hips are (lying) or the feet are (standing / sitting)
+    y_m: 7.5
+    posture: lying           # optional: standing | sitting | lying
+  - id: B
+    x_m: 15.0
+    y_m: 8.5
+    posture: sitting
