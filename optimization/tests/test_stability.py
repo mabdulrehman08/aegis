@@ -69,6 +69,28 @@ def test_stability_first_keeps_previous_over_shorter_travel():
     assert result.previous_assignment_outcomes[0].outcome == "retained"
 
 
+@pytest.mark.parametrize("engine", ENGINES)
+def test_travel_budget_guarantee_is_machine_readable(engine):
+    result = optimize(stability_case(solver=engine, objective_policy="bounded_travel_stability",
+                                     stability_travel_budget_m=5))
+    assert result.stability_budget_enforced is (engine == "ortools")
+    assert optimize(stability_case(solver=engine)).stability_budget_enforced is False
+
+
+def test_failed_cpsat_budget_is_not_reported_as_enforced(monkeypatch):
+    from optimization import solver
+
+    def exhausted(*args, **kwargs):
+        raise solver._SolverNotOptimal("forced timeout")
+
+    monkeypatch.setattr(solver, "_ortools", exhausted)
+    result = optimize(stability_case(objective_policy="bounded_travel_stability",
+                                     stability_travel_budget_m=0))
+    assert result.engine == "fallback"
+    assert result.stability_budget_enforced is False
+    assert "the travel budget is not enforced" in " ".join(result.rationale)
+
+
 def test_distance_first_stability_breaks_exact_travel_ties():
     request = build([casualty("c1", 4.5)], [responder("r1", 3.5), responder("r2", 5.5)],
                     previous_assignments=previous(("c1", "r2")))

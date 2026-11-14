@@ -1032,7 +1032,7 @@
           "ranking_score": 0.9,
           "report_age_seconds": 0.0,
           "detection_age_seconds": 0.0,
-          "next_transition_at": "2026-11-13T12:00:25.439907+00:00",
+          "next_transition_at": "2026-11-13T12:00:25.439908+00:00",
           "legacy_reasons": [],
           "legacy_comparison": "identical"
         },
@@ -1050,7 +1050,7 @@
           "ranking_score": 0.505108,
           "report_age_seconds": 25.0,
           "detection_age_seconds": 25.0,
-          "next_transition_at": "2026-11-13T12:00:25.439907+00:00",
+          "next_transition_at": "2026-11-13T12:00:25.439908+00:00",
           "legacy_reasons": [],
           "legacy_comparison": "identical"
         },

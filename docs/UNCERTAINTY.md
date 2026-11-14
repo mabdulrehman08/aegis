@@ -33,7 +33,7 @@ horizon = earliest_transition(reports.values())                 # datetime | Non
 | `min_confidence` | 0.5 | Raw confidence floor, inclusive |
 | `position_tolerance_m` | 0.25 | Max distance from `authoritative_position` |
 | `confidence_half_life_seconds` | 30 | Half-life of `ranking_score` (> 0) |
-| `decay_gates_eligibility` | false | Opt-in: exclude once `ranking_score` would fall below `min_confidence` |
+| `decay_gates_eligibility` | false | Opt-in: exclude at the inclusive `ranking_score <= min_confidence` cutoff, rounded up to a representable microsecond |
 | `allow_zone_estimates` | true | Opt-in tightening when false: exclude `zone_estimate` locations |
 
 `UncertaintyReport` (frozen) fields: `evaluated_at`, `observation_id`,
@@ -42,6 +42,18 @@ horizon = earliest_transition(reports.values())                 # datetime | Non
 `report_age_seconds`, `detection_age_seconds`, `reasons` (tuple),
 `eligible_for_new_assignment` (true exactly when `reasons` is empty) and
 `next_transition_at`.
+
+The inclusive decay gate intentionally excludes confidence exactly at the
+threshold even at detection age zero. The wire reason remains
+`decayed_confidence_below_threshold` for compatibility; it means **at or below**.
+A zero confidence floor disables this decay gate. Cutoff rounding never excludes
+a report a microsecond before the computed crossing.
+
+`location_state="observed"` describes a non-extrapolated reported location, not
+its reliability or proof of a camera detection. It can accompany `human_known`,
+`cv_unspecified`, low-confidence, or position-mismatch evidence. Consumers must
+read `location_evidence`, `reasons`, and `eligible_for_new_assignment` together;
+the location-state label alone is never permission to assign or dispatch.
 
 ## Rules
 

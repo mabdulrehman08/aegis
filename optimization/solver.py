@@ -165,10 +165,10 @@ def _greedy(routes: dict[tuple[str, str], AStarRoute], priorities: dict[str, int
                 if responder_id not in owner:
                     free_responder = responder_id
                     break
-                previous = owner[responder_id]
-                if previous not in seen:
-                    seen.add(previous)
-                    queue.append(previous)
+                previous_owner = owner[responder_id]
+                if previous_owner not in seen:
+                    seen.add(previous_owner)
+                    queue.append(previous_owner)
         while free_responder is not None:
             current = parents[free_responder]
             previous_responder = assigned.get(current)
@@ -294,8 +294,8 @@ def _stability_rationale(request, engine: str, retained: int, total: int) -> str
             "stability never overrides hard feasibility, count or allocation priority, and approved "
             "active work is hard reserved rather than a stability preference.")
     if policy == "bounded_travel_stability":
-        text += (f" Extra travel over the minimum was bounded by {request.stability_travel_budget_m} m "
-                 "in the CP-SAT solve.")
+        text += (f" Requested extra travel budget: {request.stability_travel_budget_m} m; "
+                 "only a completed CP-SAT bounded-policy stage enforces it, in rounded millimeters.")
     if engine == "fallback":
         text += (" Fallback orders candidates by the policy but does not prove minimum changes"
                  + ("; the travel budget is not enforced by the fallback." if policy
@@ -483,6 +483,9 @@ def optimize(request: OptimizationRequest) -> OptimizationResult:
         rationale=rationale, objective_values=objective_values, engine=engine,
         objective_policy=request.objective_policy, objective_tiers=tiers,
         previous_assignment_outcomes=outcomes,
+        stability_budget_enforced=(engine == "ortools"
+                                   and request.objective_policy == "bounded_travel_stability"
+                                   and any(pair in routes for pair in previous)),
         applied_assignment_exclusions={casualty_id: tags for casualty_id, tags in exclusions.items()
                                        if casualty_id not in active_casualties},
     )

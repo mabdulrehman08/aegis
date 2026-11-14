@@ -58,8 +58,8 @@ Synthetic rule-conformance evaluation of deterministic eligibility constraints. 
 | missing_human_known | 0 | yes | - | yes | observed | human_known |  | - | identical |
 | missing_human_known | 600 | yes | - | yes | observed | human_known |  | - | identical |
 | missing_unknown | 0 | no | location_unknown | yes | unknown | none |  | - | n/a |
-| decay_gate | 0 | yes | - | yes | observed | cv_calibrated_world | 0.900 | 2026-11-13T12:00:25.439907+00:00 | identical |
-| decay_gate | 25 | yes | - | yes | observed | cv_calibrated_world | 0.505 | 2026-11-13T12:00:25.439907+00:00 | identical |
+| decay_gate | 0 | yes | - | yes | observed | cv_calibrated_world | 0.900 | 2026-11-13T12:00:25.439908+00:00 | identical |
+| decay_gate | 25 | yes | - | yes | observed | cv_calibrated_world | 0.505 | 2026-11-13T12:00:25.439908+00:00 | identical |
 | decay_gate | 26 | no | decayed_confidence_below_threshold | yes | observed | cv_calibrated_world | 0.494 | 2026-11-13T12:00:30+00:00 | stricter |
 | decay_gate | 31 | no | observation_stale, track_stale, decayed_confidence_below_threshold | yes | unknown | cv_calibrated_world | 0.440 | - | same_eligibility |
 | decay_gate_at_threshold | 0 | no | decayed_confidence_below_threshold | yes | observed | cv_calibrated_world | 0.500 | 2026-11-13T12:00:30+00:00 | stricter |

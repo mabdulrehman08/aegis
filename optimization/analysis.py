@@ -129,6 +129,18 @@ class ReasonChange(_Frozen):
     scenario_reasons: list[str]
 
 
+class RouteChange(_Frozen):
+    """Route differences for a retained casualty/responder pair, not reassignment."""
+
+    casualty_id: str
+    responder_id: str
+    base_map_revision: str | None
+    scenario_map_revision: str | None
+    base_distance_m: float | None
+    scenario_distance_m: float | None
+    geometry_changed: bool
+
+
 class ObjectiveDelta(_Frozen):
     """``delta`` is scenario minus base, populated only for comparable tiers."""
 
@@ -151,6 +163,7 @@ class CounterfactualOutcome(_Frozen):
     recommendation: OptimizationResult
     changed_assignments: list[AssignmentChange]
     unchanged_assignment_count: int
+    route_changes: list[RouteChange] = Field(default_factory=list)
     preserved_assignments: list[Assignment]
     preserved_assignments_unchanged: bool
     newly_assigned_casualty_ids: list[str]
@@ -323,6 +336,26 @@ def _assignment_changes(base: OptimizationResult,
     return changes, unchanged
 
 
+def _route_changes(base: OptimizationResult, other: OptimizationResult) -> list[RouteChange]:
+    before = {(item.casualty_id, item.responder_id): item.route for item in base.assignments}
+    changes = []
+    for item in other.assignments:
+        pair = (item.casualty_id, item.responder_id)
+        if pair not in before or before[pair] == item.route:
+            continue
+        first, second = before[pair], item.route
+        changes.append(RouteChange(
+            casualty_id=item.casualty_id, responder_id=item.responder_id,
+            base_map_revision=first.map_revision if first else None,
+            scenario_map_revision=second.map_revision if second else None,
+            base_distance_m=first.distance_m if first else None,
+            scenario_distance_m=second.distance_m if second else None,
+            geometry_changed=(first.waypoints if first else None)
+                             != (second.waypoints if second else None),
+        ))
+    return changes
+
+
 def _deltas(base: OptimizationRequest, base_result: OptimizationResult, variant: OptimizationRequest,
             result: OptimizationResult) -> tuple[list[ObjectiveDelta], str, str]:
     same_previous = _pairs(base.previous_assignments) == _pairs(variant.previous_assignments)
@@ -391,6 +424,7 @@ def analyze_counterfactuals(request: CounterfactualRequest) -> CounterfactualAna
         outcomes.append(CounterfactualOutcome(
             scenario_id=scenario.id, label=scenario.label, assumption_differences=differences,
             no_op=not differences, recommendation=result, changed_assignments=changed,
+            route_changes=_route_changes(baseline, result),
             unchanged_assignment_count=unchanged, preserved_assignments=result.preserved_assignments,
             preserved_assignments_unchanged=result.preserved_assignments == baseline.preserved_assignments,
             newly_assigned_casualty_ids=[item.casualty_id for item in changed

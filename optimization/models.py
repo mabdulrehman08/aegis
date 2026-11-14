@@ -90,3 +90,4 @@ class OptimizationResult(BaseModel):
     objective_tiers: list[ObjectiveTier] = Field(default_factory=list)
     previous_assignment_outcomes: list[PreviousAssignmentOutcome] = Field(default_factory=list)
     applied_assignment_exclusions: dict[str, list[str]] = Field(default_factory=dict)
+    stability_budget_enforced: bool = False

@@ -235,12 +235,15 @@ def test_decay_gate_is_opt_in_and_reports_exact_cutoff():
                                    authoritative_position=HOME)
     assert crossed.reasons == ("decayed_confidence_below_threshold",)
     assert crossed.ranking_score == pytest.approx(0.5, abs=1e-6)
+    assert crossed.ranking_score <= policy.min_confidence
     assert crossed.next_transition_at == at(30)
     just_before = evaluate_uncertainty(observation(), early.next_transition_at - timedelta(microseconds=1),
                                        policy, authoritative_position=HOME)
     assert just_before.eligible_for_new_assignment
+    assert just_before.ranking_score > policy.min_confidence
     at_threshold = evaluate(observation(confidence=0.5), 0, policy)
     assert at_threshold.reasons == ("decayed_confidence_below_threshold",)
+    assert at_threshold.ranking_score == policy.min_confidence
     zero_floor = evaluate(observation(confidence=0.0), 0,
                           UncertaintyPolicy(min_confidence=0, decay_gates_eligibility=True))
     assert zero_floor.eligible_for_new_assignment

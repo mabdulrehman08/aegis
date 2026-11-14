@@ -125,11 +125,14 @@ def _classify(stamp: datetime, now: datetime,
 
 def _decay_cutoff(detected_at: datetime, confidence: float,
                   policy: UncertaintyPolicy) -> datetime | None:
-    """Instant from which the ranking score is below ``min_confidence``."""
+    """First representable instant at or beyond the inclusive decay cutoff."""
     if policy.min_confidence == 0 or confidence < policy.min_confidence:
         return None
     seconds = policy.confidence_half_life_seconds * math.log2(confidence / policy.min_confidence)
-    return _shift(detected_at, seconds)
+    cutoff = _shift(detected_at, seconds)
+    if cutoff is not None and (cutoff - detected_at).total_seconds() < seconds:
+        cutoff = _shift(cutoff, 0.000001)
+    return cutoff
 
 
 def _mismatched(reported: Position, known: Position, tolerance_m: float) -> bool:

@@ -140,7 +140,8 @@
             }
           ],
           "previous_assignment_outcomes": [],
-          "applied_assignment_exclusions": {}
+          "applied_assignment_exclusions": {},
+          "stability_budget_enforced": false
         },
         "scenarios": [
           {
@@ -251,7 +252,8 @@
                 }
               ],
               "previous_assignment_outcomes": [],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [
               {
@@ -264,6 +266,7 @@
               }
             ],
             "unchanged_assignment_count": 1,
+            "route_changes": [],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [],
@@ -436,7 +439,8 @@
                 }
               ],
               "previous_assignment_outcomes": [],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [
               {
@@ -457,6 +461,7 @@
               }
             ],
             "unchanged_assignment_count": 0,
+            "route_changes": [],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [],
@@ -836,7 +841,8 @@
                 }
               ],
               "previous_assignment_outcomes": [],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [
               {
@@ -857,6 +863,17 @@
               }
             ],
             "unchanged_assignment_count": 1,
+            "route_changes": [
+              {
+                "casualty_id": "casualty-001",
+                "responder_id": "responder-000",
+                "base_map_revision": "map-1",
+                "scenario_map_revision": "map-1+cf-casualty-000-blocked",
+                "base_distance_m": 3.0,
+                "scenario_distance_m": 3.0,
+                "geometry_changed": false
+              }
+            ],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [
@@ -1099,7 +1116,8 @@
               "reasons": []
             }
           ],
-          "applied_assignment_exclusions": {}
+          "applied_assignment_exclusions": {},
+          "stability_budget_enforced": false
         },
         "scenarios": [
           {
@@ -1279,7 +1297,8 @@
                   "reasons": []
                 }
               ],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [
               {
@@ -1300,6 +1319,7 @@
               }
             ],
             "unchanged_assignment_count": 0,
+            "route_changes": [],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [],
@@ -1470,7 +1490,7 @@
               "rationale": [
                 "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
                 "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
-                "Stability policy bounded_travel_stability: 0 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference. Extra travel over the minimum was bounded by 0.0 m in the CP-SAT solve."
+                "Stability policy bounded_travel_stability: 0 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference. Requested extra travel budget: 0.0 m; only a completed CP-SAT bounded-policy stage enforces it, in rounded millimeters."
               ],
               "objective_values": {
                 "assigned_count": 2.0,
@@ -1523,10 +1543,12 @@
                   "reasons": []
                 }
               ],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": true
             },
             "changed_assignments": [],
             "unchanged_assignment_count": 2,
+            "route_changes": [],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [],
@@ -1717,7 +1739,7 @@
               "rationale": [
                 "Maximize feasible new assignments before allocation priority, then minimize rounded millimeter travel and break ties by sorted casualty/responder IDs. Human-confirmed immediate=2, delayed=1, minor=0 allocation points. Unassessed, future-assessed, expectant and deceased receive protected 2-point allocation parity with immediate, NOT an inferred medical severity. There is no automatic clinical expectant/deceased deprioritization. These recommendations require human review and do not authorize dispatch.",
                 "Only available, unreserved, capability-compatible responders with verified grid routes enter the shared candidate graph. Missing observations do not infer uncertainty; supplied uncertain observations block new work, never existing work.",
-                "Stability policy bounded_travel_stability: 2 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference. Extra travel over the minimum was bounded by 10.0 m in the CP-SAT solve."
+                "Stability policy bounded_travel_stability: 2 of 2 previous unapproved proposals retained; stability never overrides hard feasibility, count or allocation priority, and approved active work is hard reserved rather than a stability preference. Requested extra travel budget: 10.0 m; only a completed CP-SAT bounded-policy stage enforces it, in rounded millimeters."
               ],
               "objective_values": {
                 "assigned_count": 2.0,
@@ -1770,7 +1792,8 @@
                   "reasons": []
                 }
               ],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": true
             },
             "changed_assignments": [
               {
@@ -1791,6 +1814,7 @@
               }
             ],
             "unchanged_assignment_count": 0,
+            "route_changes": [],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [],
@@ -1997,10 +2021,12 @@
                 }
               ],
               "previous_assignment_outcomes": [],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [],
             "unchanged_assignment_count": 2,
+            "route_changes": [],
             "preserved_assignments": [],
             "preserved_assignments_unchanged": true,
             "newly_assigned_casualty_ids": [],
@@ -2212,7 +2238,8 @@
             }
           ],
           "previous_assignment_outcomes": [],
-          "applied_assignment_exclusions": {}
+          "applied_assignment_exclusions": {},
+          "stability_budget_enforced": false
         },
         "scenarios": [
           {
@@ -2354,10 +2381,12 @@
                 }
               ],
               "previous_assignment_outcomes": [],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [],
             "unchanged_assignment_count": 1,
+            "route_changes": [],
             "preserved_assignments": [
               {
                 "casualty_id": "casualty-000",
@@ -2583,10 +2612,22 @@
                 }
               ],
               "previous_assignment_outcomes": [],
-              "applied_assignment_exclusions": {}
+              "applied_assignment_exclusions": {},
+              "stability_budget_enforced": false
             },
             "changed_assignments": [],
             "unchanged_assignment_count": 1,
+            "route_changes": [
+              {
+                "casualty_id": "casualty-001",
+                "responder_id": "responder-001",
+                "base_map_revision": "map-1",
+                "scenario_map_revision": "map-1+cf-debris-on-active",
+                "base_distance_m": 7.0,
+                "scenario_distance_m": 7.0,
+                "geometry_changed": true
+              }
+            ],
             "preserved_assignments": [
               {
                 "casualty_id": "casualty-000",

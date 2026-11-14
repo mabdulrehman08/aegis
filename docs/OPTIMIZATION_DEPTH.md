@@ -41,6 +41,10 @@ engine `ortools` (including when its bounded solve did not fall back). The fallb
 orders candidates by the policy but does **not** prove minimum changes, and ignores the
 travel budget; `nearest` ignores previous assignments. Rationale text says so, and
 `engine` is the actual algorithm run (`none` without an occupancy map).
+`stability_budget_enforced` is true only when a completed CP-SAT bounded-policy
+stage actually enforced the bound; fallback, nearest, empty graphs and requests
+with no feasible previous preference report false. The bound applies to rounded
+millimeter costs (up to 0.5 mm rounding per assigned route), not exact distances.
 
 ## `assignment_exclusions`
 
@@ -84,6 +88,12 @@ responder_changed with route distances), `preserved_assignments` separately with
 `preserved_assignments_unchanged`, `reason_changes`, `objective_deltas`,
 `objective_verdict`, `requested_solver`/`engine`/`base_engine`/`fallback_used`,
 `no_op`, and constant `authorizes_dispatch=False`.
+
+`unchanged_assignment_count` counts unchanged casualty/responder pairs, not
+unchanged routes. The additive `route_changes` list shows retained pairs whose
+route geometry, distance, or map revision changed. A bounded-policy verdict
+compares stability before travel, within each run's own minimum-plus-budget;
+"improved" is not a claim of shorter travel across changed maps.
 
 **Comparability.** A delta is scenario minus base. Stability deltas are `not_comparable`
 when previous preferences differ or a tier exists in only one run. A lexicographic

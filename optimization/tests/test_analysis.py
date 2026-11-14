@@ -139,6 +139,27 @@ def test_obstacle_removal_restores_reachability_and_custom_revision():
     assert analysis.scenarios[0].map_revision == "map-open"
 
 
+@pytest.mark.parametrize("engine", ENGINES)
+def test_retained_pair_reports_route_detour_separately(engine):
+    base = base_request(engine, casualties=[casualty("c1", 4.5)], responders=[responder("r1")])
+    obstacle = Obstacle(id="short-wall", vertices=[
+        Position(frame_id="world", x_m=2.2, y_m=0),
+        Position(frame_id="world", x_m=2.8, y_m=0),
+        Position(frame_id="world", x_m=2.8, y_m=1),
+        Position(frame_id="world", x_m=2.2, y_m=1),
+    ])
+    outcome = run(base, scenario("detour", ObstacleAddedChange(
+        kind="obstacle_added", obstacle=obstacle))).scenarios[0]
+    assert outcome.changed_assignments == []
+    assert outcome.unchanged_assignment_count == 1
+    assert len(outcome.route_changes) == 1
+    change = outcome.route_changes[0]
+    assert (change.casualty_id, change.responder_id) == ("c1", "r1")
+    assert change.geometry_changed is True
+    assert change.scenario_distance_m > change.base_distance_m
+    assert change.base_map_revision != change.scenario_map_revision
+
+
 def test_active_work_exactly_preserved_and_stale_route_reported_not_rewritten():
     base = base_request(active_assignments=[Assignment(casualty_id="c1", responder_id="r1")])
     analysis = run(base, scenario("wall", ObstacleAddedChange(kind="obstacle_added",
