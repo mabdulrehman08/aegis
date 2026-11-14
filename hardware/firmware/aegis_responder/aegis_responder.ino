@@ -1,4 +1,4 @@
-// AEGIS responder device firmware — Arduino UNO R4 WiFi + Grove Base Shield.
+// AEGIS responder device firmware — Arduino UNO R4 WiFi, and Arduino UNO Q.
 //
 // The device is carried by a responder. It only displays assignments the
 // laptop bridge sends and reports button presses back. It never decides,
@@ -10,6 +10,11 @@
 //   arduino_secrets.example.h). The bridge laptop runs a 2.4 GHz hotspot; the
 //   device joins it and connects to BRIDGE_HOST:BRIDGE_PORT. It reconnects on
 //   its own after walking out of range.
+//
+// UNO Q: the same sketch. Its microcontroller has no radio or USB serial of its
+// own, so it reaches the bridge through the board's Linux side
+// (Arduino_RouterBridge), which must already be on the same network as the
+// bridge laptop. The matrix is 13x8 instead of 12x8.
 //
 // Wiring: Grove button -> D2 (via a Grove Base Shield, or a Grove-to-jumper
 // cable: yellow SIG -> D2, red VCC -> 5V, black GND -> GND).
@@ -33,12 +38,32 @@
 #include "ArduinoGraphics.h"
 #include "Arduino_LED_Matrix.h"
 
+#if defined(ARDUINO_UNO_Q)
+#include <Arduino_RouterBridge.h>
+#if __has_include("arduino_secrets.h")
+#include "arduino_secrets.h"
+#endif
+#ifndef BRIDGE_HOST
+#define BRIDGE_HOST "192.168.137.1"   // the bridge laptop on its own hotspot
+#endif
+#ifndef BRIDGE_PORT
+#define BRIDGE_PORT 7777
+#endif
+#define AEGIS_UNO_Q 1
+#define AEGIS_WIFI 1
+#define AEGIS_SERIAL 0   // no USB serial to a host; everything goes over TCP
+#define MATRIX_W 13
+#else
+#define AEGIS_UNO_Q 0
+#define AEGIS_SERIAL 1
+#define MATRIX_W 12
 #if __has_include("arduino_secrets.h")
 #include "arduino_secrets.h"
 #include <WiFiS3.h>
 #define AEGIS_WIFI 1
 #else
 #define AEGIS_WIFI 0
+#endif
 #endif
 
 // Several devices on one bridge laptop: build device N with
@@ -56,7 +81,11 @@ const char *DEVICE_ID = "responder-device-0" AEGIS_STR(AEGIS_DEVICE_NUM);
 
 const int BUTTON_PIN = 2;
 const int LED_PIN = 4;                   // optional external Grove LED
+#if AEGIS_UNO_Q
+const int ONBOARD_LED = -1;              // UNO Q: the matrix is the alert; no single "L" LED
+#else
 const int ONBOARD_LED = LED_BUILTIN;     // the board's own "L" LED, always present
+#endif
 
 const unsigned long DEBOUNCE_MS = 30;
 const unsigned long LONG_PRESS_MS = 1500;
@@ -73,9 +102,13 @@ const unsigned long TAP_WINDOW_MS = 600;    // three taps this close together = 
 
 const int CMD_MAX = 40;
 const int LABEL_MAX = 4;
-const int LINE_MAX = 96;
+const int LINE_LEN_MAX = 96;
 
+#if AEGIS_UNO_Q
+Arduino_LED_Matrix matrix;
+#else
 ArduinoLEDMatrix matrix;
+#endif
 
 enum State { IDLE, ALERTING, ACKED };
 State state = IDLE;
@@ -88,7 +121,7 @@ char pendingKind[5] = "";  // "ACK" or "DONE" awaiting host OK
 unsigned long pendingSentAt = 0;
 
 struct LineReader {
-  char buf[LINE_MAX + 1];
+  char buf[LINE_LEN_MAX + 1];
   int len = 0;
   bool overflow = false;
 };
@@ -111,7 +144,11 @@ int tapCount = 0;
 unsigned long lastTapAt = 0;
 
 #if AEGIS_WIFI
+#if AEGIS_UNO_Q
+BridgeTCPClient<> bridge(Bridge);
+#else
 WiFiClient bridge;
+#endif
 LineReader tcpReader;
 unsigned long lastWifiAttempt = 0;
 unsigned long lastWifiCheck = 0;
@@ -128,10 +165,12 @@ void showIdle();
 
 // Every reply goes to USB and, when connected, to the bridge over WiFi.
 void emitLine(const char *a, const char *b = nullptr, const char *c = nullptr) {
+#if AEGIS_SERIAL
   Serial.print(a);
   if (b) { Serial.print(' '); Serial.print(b); }
   if (c) { Serial.print(' '); Serial.print(c); }
   Serial.println();
+#endif
 #if AEGIS_WIFI
   if (tcpUp) {
     bridge.print(a);
@@ -171,7 +210,7 @@ void showIdle() {
   }
   matrix.beginDraw();
   matrix.clear();
-  matrix.point(11, 7);  // single "alive and linked" pixel
+  matrix.point(MATRIX_W - 1, 7);  // single "alive and linked" pixel
   matrix.endDraw();
 }
 
@@ -186,7 +225,7 @@ void startBanner(bool withStatus) {
     strcpy(bannerText, "AEGIS");
   }
   bannerActive = true;
-  bannerX = 12;
+  bannerX = MATRIX_W;
   bannerStepAt = 0;
 }
 
@@ -232,7 +271,7 @@ void retryPendingReport() {
 void setLed(bool on) {
   ledOn = on;
   digitalWrite(LED_PIN, on ? HIGH : LOW);
-  digitalWrite(ONBOARD_LED, on ? HIGH : LOW);
+  if (ONBOARD_LED >= 0) digitalWrite(ONBOARD_LED, on ? HIGH : LOW);
 }
 
 void clearAssignment() {
@@ -320,7 +359,7 @@ void feed(LineReader &r, char c, const char *link) {
     }
     r.len = 0;
     r.overflow = false;
-  } else if (r.len < LINE_MAX) {
+  } else if (r.len < LINE_LEN_MAX) {
     r.buf[r.len++] = c;
   } else {
     r.overflow = true;
@@ -328,7 +367,9 @@ void feed(LineReader &r, char c, const char *link) {
 }
 
 void readSerial() {
+#if AEGIS_SERIAL
   while (Serial.available() > 0) feed(serialReader, (char)Serial.read(), "usb");
+#endif
 }
 
 // ---------------------------------------------------------------- WiFi link
@@ -347,7 +388,11 @@ void maintainWifi() {
   if (now - lastWifiCheck < WIFI_CHECK_MS) return;
   lastWifiCheck = now;
 
+#if AEGIS_UNO_Q
+  wifiUp = true;  // the Linux side owns the network; a failed connect below is the only signal
+#else
   wifiUp = WiFi.status() == WL_CONNECTED;
+#endif
   if (!wifiUp) {
     if (tcpUp) { bridge.stop(); setTcpUp(false); }
     if (!wifiJoinStarted || now - lastWifiAttempt >= WIFI_RETRY_MS) {
@@ -355,7 +400,9 @@ void maintainWifi() {
       lastWifiAttempt = now;
       // setTimeout(0) in setup(): begin() starts the join and returns at once;
       // the WiFi chip keeps joining in the background and status() reports it.
+#if !AEGIS_UNO_Q
       WiFi.begin(SECRET_SSID, SECRET_PASS);
+#endif
     }
     return;
   }
@@ -365,7 +412,12 @@ void maintainWifi() {
   }
   if (!tcpUp && now - lastTcpAttempt >= TCP_RETRY_MS) {
     lastTcpAttempt = now;
-    if (bridge.connect(BRIDGE_HOST, BRIDGE_PORT + AEGIS_DEVICE_NUM - 1)) {
+#if AEGIS_UNO_Q
+    bool opened = bridge.connect(BRIDGE_HOST, BRIDGE_PORT + AEGIS_DEVICE_NUM - 1) == 0;  // 0 = success here
+#else
+    bool opened = bridge.connect(BRIDGE_HOST, BRIDGE_PORT + AEGIS_DEVICE_NUM - 1);
+#endif
+    if (opened) {
       tcpReader.len = 0;
       tcpReader.overflow = false;
       lastHostMessage = millis();
@@ -459,12 +511,17 @@ void updateLed() {
 // ---------------------------------------------------------------- main
 
 void setup() {
+#if AEGIS_SERIAL
   Serial.begin(115200);
+#endif
   pinMode(BUTTON_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
-  pinMode(ONBOARD_LED, OUTPUT);
+  if (ONBOARD_LED >= 0) pinMode(ONBOARD_LED, OUTPUT);
   matrix.begin();
-#if AEGIS_WIFI
+#if AEGIS_UNO_Q
+  Bridge.begin();
+  bridge.begin();
+#elif AEGIS_WIFI
   WiFi.setTimeout(0);  // make WiFi.begin() non-blocking (see maintainWifi)
 #endif
   clearAssignment();
