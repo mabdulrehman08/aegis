@@ -19,6 +19,7 @@ dashboard (`CONTRACT_PROPOSAL.md`). All scenes and casualties are simulated.
 | 0 | Detection test harness | Done |
 | 1 | Camera → YOLO → ByteTrack → mapping → publisher | Done; staged-floor calibration needs the tape marks |
 | 1 | Phone as camera 2 (`phone-1`, predefined zones) | Done, verified live together with the Logitech |
+| 1 | Rooms without calibration (`rooms.yaml`) and bodycam (`bodycam.yaml`, camera-motion aware signs) | Done, unit-tested and checked on handheld clips; needs a real bodycam walk-through |
 | 3 | Record / replay fallback, evaluation tool | Done; staged scenario runs (lying, sitting, occlusion) still to record |
 | 2 | Observed signs: posture, movement, command response, eyes, breathing, visible blood | Done and unit-tested; live-checked for eyes, movement and blood (no false positive on skin). Sending needs the backend change in `CONTRACT_PROPOSAL.md`; breathing and closed eyes still need a staged lying test |
 
@@ -159,6 +160,48 @@ add zones with `image_polygon` (see the comments in `phone.yaml`). The backend
 fixes a camera's mapping until the scenario is reset, so change zones only
 before a reset. If the phone gets a real floor calibration, set
 `mapping.mode: calibrated` and a `homography` file in its config instead.
+
+### Any room without calibration, and bodycams
+
+Tape and a homography are only needed for metre positions on one fixed floor.
+For tests in different rooms and for a moving camera, each **room is a zone**
+with one point on the demo map (`room-1` (3, 2), `room-2` (14, 8), `room-3`
+(18, 14), all walkable). Everyone a camera sees is reported in its current
+room, which the backend places at that room's point as a `zone_estimate`.
+
+```sh
+python -m cv.main --config cv/config/rooms.yaml --room room-2 --signs     # fixed camera in a room
+python -m cv.main --config cv/config/rooms.yaml --room room-3 --camera 1 --camera-id room-cam-2
+python -m cv.main --config cv/config/bodycam.yaml --room room-1           # moving camera
+```
+
+- **Picking the room:** `--room` at start; keys **1–3** in the window when the
+  wearer enters another room (`mapping.zone_select: keys`). The HUD shows
+  `ROOM ...`. Switching applies at once to everyone visible, so press it on
+  entering, not before leaving.
+- **Camera IDs:** one per physical camera. A camera's room list is registered
+  once per epoch, so keep the list the same until a reset.
+
+**Bodycam signs** (`signs.moving_camera`, on in `bodycam.yaml`): the camera's
+own motion is measured from background corners outside the people's boxes
+(`signs/camera_motion.py`) and shown on the HUD:
+
+| Camera | Measured on | Signs |
+| --- | --- | --- |
+| `still` (≤ 10 px/s) | Fixed UR Fall camera: 82–100% of frames | All, breathing with the camera's own shift removed |
+| `steady` (≤ 80 px/s) | Handheld stock clips: 10–60 px/s | Movement and response relative to the body (sway does not count; whole-body shifts like crawling do not either); breathing not testable |
+| `moving` | Walking camera: 57–71% of frames | Movement, response and breathing paused: `not_testable`, `reason: camera_moving` |
+| `unknown` | Too little background, e.g. a casualty filling the frame | Like `steady` |
+
+Eyes, blood and posture are judged per frame and keep working. Stillness
+restarts after the camera moved, and a command given while the camera moves
+gives `not_tested`, never `no_response`. On the handheld clips the body-relative
+mode reads people as still as often or more often than the fixed-camera mode
+(sleeping man 59% vs 48%). Remaining "moving" there is pose noise on bodies
+under blankets. For the bodycam: kneel and hold still for breathing (about 15 s);
+looking straight down at someone lying can make posture read upright.
+
+Test a recording: `python -m cv.tools.signs_report --source walk.mp4 --moving-camera`.
 
 ## What is published
 
@@ -407,7 +450,7 @@ are not accuracy figures. Mapping error comes from the staged scenario runs.
 python -m pytest cv/tests
 ```
 
-128 tests. The suite covers:
+143 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.
@@ -427,6 +470,11 @@ python -m pytest cv/tests
   level face crops for sideways faces, signs sent only on visible reports.
 - Fake casualties: the scripted timeline, and the whole scene accepted by the
   in-process backend.
+- Rooms and bodycam: camera still / steady / moving / unknown from the
+  background (a moving person is not camera motion), camera sway not counted
+  as movement while a raised hand still counts as a response, a moving camera
+  pausing signs, sway at a breathing rate not read as breathing, room keys,
+  and every room point walkable on the demo map.
 - Contract tests that validate every payload against `backend/app/models.py` and
   `backend/app/simulation/models.py`, and drive the in-process backend through
   full calibrated and zone lifecycles (skipped without `requirements-dev.txt`).

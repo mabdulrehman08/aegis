@@ -51,11 +51,29 @@ legacy route), present only on `visible` reports:
 | Sign | `value` | Extra fields | How it is measured |
 | --- | --- | --- | --- |
 | `posture` | `standing` / `sitting` / `lying` / `unknown` | – | Pose keypoints on the floor plane, 15-frame vote (already used internally) |
-| `movement` | `moving` / `still` / `not_testable` | `still_for_s` | Keypoint motion normalized by body size |
+| `movement` | `moving` / `still` / `not_testable` | `still_for_s` | Keypoint motion normalized by body size. `still_for_s` restarts after the camera moved |
 | `response` | `responded` / `no_response` / `not_tested` | `command_at` | Limb motion in the window after the operator marks a spoken command |
 | `eyes` | `open` / `closed` / `not_testable` | – | MediaPipe Face Landmarker blink scores on the face crop; `not_testable` when the face is turned away or too small |
 | `breathing` | `motion_detected` / `no_motion_detected` / `not_testable` | `rate_bpm` (only when detected) | Optical flow on the chest while the person is still, clear spectral peak in 6–40 /min in both halves of a 15 s window. `no_motion_detected` = chest motion under 0.3 px (low confidence); irregular motion = `not_testable`. Tuned to miss faint breathing rather than report breathing that is not there |
 | `visible_blood` | `detected` / `not_detected` / `not_testable` | `regions`, `method` | Deep-red pixels (green and blue ≤ 0.35 × red, which excludes skin and lips) inside body regions from keypoints (`color`), later a fine-tuned model (`model`). Red clothing triggers it |
+
+**Moving cameras (bodycam, handheld).** These add `camera_motion`, measured from
+the background:
+
+```json
+"camera_motion": {"value": "steady", "speed_px_s": 34.2},
+"breathing": {"value": "not_testable", "confidence": 0.0, "reason": "camera_moving"}
+```
+
+| `camera_motion.value` | Effect on the other signs |
+| --- | --- |
+| `still` | As on a fixed camera |
+| `steady` (sway) / `unknown` (too little background) | Movement and response measured relative to the body (`still` confidence ≤ 0.6); breathing `not_testable` |
+| `moving` (walking, turning) | Movement and response `not_testable` / `not_tested` too |
+
+Posture, eyes and blood are judged per frame and are not affected. A sign that
+is `not_testable` or `not_tested` because of the camera carries
+`"reason": "camera_moving"`. Fixed cameras send no `camera_motion`.
 
 `regions` ⊆ `head`, `torso`, `left_arm`, `right_arm`, `left_leg`, `right_leg`,
 following DARPA's trauma regions. `confidence` is in [0, 1] and is a detector

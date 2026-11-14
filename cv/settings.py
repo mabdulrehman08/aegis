@@ -40,6 +40,7 @@ class MappingSettings:
     homography: str = "homography.json"
     frame_id: str = "demo-floor-1"
     zones: tuple = ()                   # used when mode is zones; see cv/zones.py
+    zone_select: str = "image"          # image (zone polygons) | keys (current room, keys 1-9)
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,10 @@ class SignsSettings:
 
     enabled: bool = False               # compute and show signs (sending: publisher.send_signs)
     window_s: float = 10.0              # smoothing window reported as signs.window_s
+    moving_camera: bool = False         # bodycam / handheld: measure camera motion (signs/camera_motion.py)
+    camera_window_s: float = 1.0
+    camera_still_px_s: float = 10.0     # background px/s at 1280 width; fixed cameras measured 2-10
+    camera_steady_px_s: float = 80.0    # handheld stock clips 10-60; a walking camera goes past 100
     motion_lag_s: float = 1.0           # keypoints compared with this long ago
     move_threshold: float = 0.06        # displacement / body size that counts as movement
     still_after_s: float = 2.0          # no movement for this long = still

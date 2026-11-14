@@ -4,16 +4,26 @@ Keypoints are compared with their position ``motion_lag_s`` ago rather than the
 previous frame, so per-frame detector jitter does not add up to "movement".
 Displacements are divided by the body size, so the same threshold works near and
 far from the camera.
+
+With a moving camera (signs/camera_motion.py) the camera state decides:
+``fixed`` / ``still`` compare image positions; ``steady`` / ``unknown`` compare
+positions relative to the torso center, turned back by the camera roll, so
+camera sway does not count (whole-body shifts such as crawling do not either);
+``moving`` pauses movement and response, which then become ``not_testable``.
 """
 
 from __future__ import annotations
 
+import math
 from collections import deque
 from dataclasses import dataclass, field
 
 import numpy as np
 
-from cv.signs.body import LIMBS, body_scale
+from cv.signs.body import LIMBS, TORSO, body_scale
+
+IMAGE_FRAME = ("fixed", "still")
+BODY_FRAME_MAX_CONFIDENCE = 0.6
 
 
 @dataclass
@@ -23,6 +33,21 @@ class Sample:
     keypoint_conf: np.ndarray | None
     center: np.ndarray
     scale: float
+    camera: str = "fixed"
+    roll_deg: float = 0.0
+
+
+def body_frame(sample: Sample, min_conf: float = 0.5) -> np.ndarray:
+    """Keypoints relative to the torso center, with the camera roll undone."""
+    torso = [i for i in TORSO if sample.keypoint_conf[i] >= min_conf]
+    center = sample.keypoints[torso].mean(axis=0) if len(torso) >= 2 else sample.center
+    angle = math.radians(-sample.roll_deg)
+    rotation = np.array([[math.cos(angle), -math.sin(angle)], [math.sin(angle), math.cos(angle)]])
+    return (sample.keypoints - center) @ rotation.T
+
+
+def uses_body_frame(a: Sample, b: Sample) -> bool:
+    return a.camera not in IMAGE_FRAME or b.camera not in IMAGE_FRAME
 
 
 def displacement(a: Sample, b: Sample, indices=None, min_conf: float = 0.5,
@@ -34,6 +59,7 @@ def displacement(a: Sample, b: Sample, indices=None, min_conf: float = 0.5,
     while a single jittering keypoint does not.
     """
     scale = max(a.scale, b.scale)
+    body = uses_body_frame(a, b)
     if a.keypoints is not None and b.keypoints is not None:
         both = (a.keypoint_conf >= min_conf) & (b.keypoint_conf >= min_conf)
         if indices is not None:
@@ -41,12 +67,22 @@ def displacement(a: Sample, b: Sample, indices=None, min_conf: float = 0.5,
             chosen[list(indices)] = True
             both &= chosen
         if both.sum() >= 2:
-            moved = np.linalg.norm(a.keypoints[both] - b.keypoints[both], axis=1)
-            if top is not None:
-                return float(np.sort(moved)[-min(top, len(moved))]) / scale
-            return float(np.percentile(moved, 75)) / scale
+            def measure(pa, pb):
+                moved = np.linalg.norm(pa[both] - pb[both], axis=1)
+                if top is not None:
+                    return float(np.sort(moved)[-min(top, len(moved))]) / scale
+                return float(np.percentile(moved, 75)) / scale
+
+            image = measure(a.keypoints, b.keypoints)
+            if not body:
+                return image
+            # Camera sway inflates only the image measure, torso-center jitter only the
+            # body-frame one; real limb movement shows in both.
+            return min(image, measure(body_frame(a, min_conf), body_frame(b, min_conf)))
         if indices is not None:
             return None
+    if body:
+        return None
     return float(np.linalg.norm(a.center - b.center)) / scale
 
 
@@ -56,6 +92,7 @@ class MotionState:
     last_motion_t: float | None = None
     last_measured_t: float | None = None
     level: float = 0.0
+    body_frame: bool = False
     history: deque = field(default_factory=lambda: deque(maxlen=120))
     command_t: float | None = None
     command_ref: Sample | None = None
@@ -70,17 +107,25 @@ class MotionEstimator:
         self.settings = settings
         self.min_conf = min_conf
 
-    def sample(self, bbox, keypoints, keypoint_conf, t: float) -> Sample:
+    def sample(self, bbox, keypoints, keypoint_conf, t: float, camera: str = "fixed",
+               roll_deg: float = 0.0) -> Sample:
         x1, y1, x2, y2 = bbox
         return Sample(t, None if keypoints is None else np.asarray(keypoints, dtype=float),
                       None if keypoint_conf is None else np.asarray(keypoint_conf, dtype=float),
                       np.array([(x1 + x2) / 2, (y1 + y2) / 2]),
-                      body_scale(bbox, keypoints, keypoint_conf, self.min_conf))
+                      body_scale(bbox, keypoints, keypoint_conf, self.min_conf), camera, roll_deg)
 
     def update(self, state: MotionState, sample: Sample) -> None:
         settings = self.settings
         t = sample.t
         state.first_t = t if state.first_t is None else state.first_t
+        if sample.camera == "moving":
+            # References from before the move no longer line up, and stillness was not
+            # observed meanwhile: start again once the camera settles.
+            state.history.clear()
+            state.command_ref = state.command_last_t = None
+            state.first_t, state.last_motion_t = t, None
+            return
         reference = next((s for s in reversed(state.history) if t - s.t >= settings.motion_lag_s), None)
         state.history.append(sample)
         if reference is not None:
@@ -90,6 +135,7 @@ class MotionEstimator:
                 # One limb moving a lot is movement too, on the body-motion scale.
                 state.level = max(moved, limb * settings.move_threshold / settings.response_threshold)
                 state.last_measured_t = t
+                state.body_frame = uses_body_frame(sample, reference)
                 if state.level >= settings.move_threshold:
                     state.last_motion_t = t
         if state.command_t is not None and state.response == "pending":
@@ -123,7 +169,10 @@ class MotionEstimator:
         still_for = max(0.0, t - since)
         if still_for >= self.settings.still_after_s:
             margin = 1.0 - min(1.0, state.level / self.settings.move_threshold)
-            return {"value": "still", "confidence": round(0.5 + 0.5 * margin, 2),
+            confidence = 0.5 + 0.5 * margin
+            if state.body_frame:  # whole-body shifts are not seen relative to the body
+                confidence = min(confidence, BODY_FRAME_MAX_CONFIDENCE)
+            return {"value": "still", "confidence": round(confidence, 2),
                     "still_for_s": round(still_for, 1)}
         return {"value": "moving", "confidence": round(min(1.0, 0.5 + state.level), 2),
                 "still_for_s": 0.0}

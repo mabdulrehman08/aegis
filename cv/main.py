@@ -8,6 +8,8 @@ camera observations to the backend at ``publisher.rate_hz``.
     python -m cv.main --mock-backend                   # print JSON instead of sending
     python -m cv.main --source clip.mp4 --loop         # replay a recording
     python -m cv.main --signs                          # also observe signs (press c = command given)
+    python -m cv.main --config cv/config/rooms.yaml --room room-2    # fixed camera, no calibration
+    python -m cv.main --config cv/config/bodycam.yaml  # moving camera; keys 1-9 = current room
 
 Reports detections, tracking state, floor positions and, with ``--signs``,
 observed signs with confidence (cv/signs/). It never outputs a diagnosis,
@@ -55,6 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-display", action="store_true", help="no debug window")
     parser.add_argument("--duration", type=float, default=0.0, help="stop after N seconds (0 = run)")
     parser.add_argument("--summary-json", help="also write the measured run summary to this file")
+    parser.add_argument("--room", help="mapping.zone_select keys: starting room (default: the first zone)")
     parser.add_argument("--signs", action="store_true", help="observe signs (config: signs.enabled)")
     parser.add_argument("--send-signs", action="store_true",
                         help="include signs in reports (needs the backend change in CONTRACT_PROPOSAL.md)")
@@ -104,6 +107,10 @@ def resolve_mapping(settings: Settings, args: argparse.Namespace,
                     sidecar: dict | None) -> tuple[Calibration | None, ZoneMap | None]:
     """The calibration (calibrated mode) or zone map (zones mode) to publish with."""
     mode = settings.mapping.mode
+    if settings.mapping.zone_select not in ("image", "keys"):
+        raise ValueError("mapping.zone_select must be 'image' or 'keys'")
+    if settings.mapping.zone_select == "keys" and mode != "zones":
+        raise ValueError("mapping.zone_select: keys needs mapping.mode: zones")
     if mode == "zones":
         zones = parse_zones(settings.mapping.zones, settings.mapping.frame_id)
         log.info("Zones mapping: %s", ", ".join(f"{z.zone_id}=({z.x_m:g}, {z.y_m:g})"
@@ -122,6 +129,14 @@ def resolve_mapping(settings: Settings, args: argparse.Namespace,
         describe_calibration(calibration, "the recording sidecar")
         return calibration, None
     return load_calibration(resolve(settings.mapping.homography)), None
+
+
+def room_for_key(key: int, zone_map: ZoneMap | None) -> str | None:
+    """Keys 1-9 pick the n-th zone (zone_select: keys)."""
+    if zone_map is None or not ord("1") <= key <= ord("9"):
+        return None
+    index = key - ord("1")
+    return zone_map.zones[index].zone_id if index < len(zone_map.zones) else None
 
 
 def run(args: argparse.Namespace) -> int:
@@ -143,6 +158,15 @@ def run(args: argparse.Namespace) -> int:
     camera = Camera(settings.camera, args.source, pace=not args.no_pace, clock=timebase.now,
                     fps_override=(sidecar or {}).get("fps"), loop=args.loop)
     tracker = TrackManager(settings.tracking, session)
+    pick_room = settings.mapping.zone_select == "keys"
+    if pick_room:
+        tracker.zones = zone_map
+        tracker.set_current_zone(args.room or zone_map.zones[0].zone_id)
+        log.info("Room %s; press 1-%d in the window when entering another room (%s)",
+                 tracker.current_zone, min(9, len(zone_map.zones)),
+                 ", ".join(f"{n}={z.zone_id}" for n, z in enumerate(zone_map.zones[:9], 1)))
+    elif args.room:
+        raise ValueError("--room needs mapping.zone_select: keys")
     signs = None
     if settings.signs.enabled:
         from cv.signs import SignsEstimator
@@ -251,6 +275,10 @@ def run(args: argparse.Namespace) -> int:
                     signs.mark_command(now)
                     log.info("Command marked: watching for responses for %.0f s",
                              settings.signs.command_window_s)
+                room = room_for_key(key, zone_map) if pick_room else None
+                if room is not None and room != tracker.current_zone:
+                    tracker.set_current_zone(room)
+                    log.info("Room changed to %s", room)
     finally:
         camera.release()
         if publisher is not None:
@@ -280,7 +308,8 @@ def show(image, tracks, tracker, calibration, zone_map, camera, publisher, fps, 
 
     canvas = image.copy()
     draw_calibration(canvas, calibration)
-    draw_zones(canvas, zone_map)
+    if tracker.current_zone is None:
+        draw_zones(canvas, zone_map)
     extra = {}
     if signs is not None:
         from cv.signs import describe
@@ -297,6 +326,10 @@ def show(image, tracks, tracker, calibration, zone_map, camera, publisher, fps, 
         f"untracked dets {tracker.untracked} | retired {tracker.retired_total}",
     ]
     warnings = []
+    if tracker.current_zone is not None:
+        room = zone_map.get(tracker.current_zone)
+        hud.append(f"ROOM {room.zone_id} -> map ({room.x_m:g}, {room.y_m:g}) | "
+                   f"keys 1-{min(9, len(zone_map.zones))} change room")
     if pub is not None:
         mode = "MOCK" if args.mock_backend else "backend"
         hud.append(f"{mode}: accepted {pub['accepted']} rejected {pub['rejected']} "
@@ -311,6 +344,13 @@ def show(image, tracks, tracker, calibration, zone_map, camera, publisher, fps, 
     if signs is not None:
         hud.append("signs: observations, not a diagnosis | c = command given"
                    + (" | SENDING" if settings.publisher.send_signs else " | not sent"))
+        if signs.camera_state is not None:
+            camera = signs.camera_motion
+            speed = signs.camera_state.speed_px_s
+            hud.append(f"camera {camera}" + (f" ({speed:.0f} px/s)" if speed is not None else "")
+                       + {"moving": ": movement, response and breathing paused",
+                          "steady": ": movement relative to the body; no breathing",
+                          "unknown": ": too little background; no breathing"}.get(camera, ""))
     draw_hud(canvas, hud, warnings)
     cv2.imshow(WINDOW, canvas)
     return cv2.waitKey(1) & 0xFF

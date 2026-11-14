@@ -14,8 +14,9 @@ from typing import Callable, Sequence
 from cv.settings import MODELS_DIR, SignsSettings, resolve
 from cv.signs.blood import BloodEstimator, BloodState
 from cv.signs.breathing import BreathingEstimator, BreathingState
+from cv.signs.camera_motion import CameraMotionEstimator, CameraMotionState
 from cv.signs.eyes import EyeEstimator, EyeState, FaceScorer
-from cv.signs.motion import MotionEstimator, MotionState
+from cv.signs.motion import IMAGE_FRAME, MotionEstimator, MotionState
 
 SCHEMA = "aegis-cv-signs/0.1"
 
@@ -39,8 +40,15 @@ class SignsEstimator:
         scorer = face_scorer or FaceScorer(resolve(settings.eyes_model, MODELS_DIR),
                                            settings.eyes_turned_deg, settings.eyes_max_yaw_deg)
         self.eyes = EyeEstimator(settings, scorer, keypoint_min_conf)
+        self.camera = CameraMotionEstimator(settings)
+        self.camera_state = CameraMotionState() if settings.moving_camera else None
         self.states: dict[str, _TrackSigns] = {}
         self.command_t: float | None = None
+
+    @property
+    def camera_motion(self) -> str:
+        """``fixed`` unless signs.moving_camera; else still / steady / moving / unknown."""
+        return self.camera_state.state if self.camera_state is not None else "fixed"
 
     def mark_command(self, t: float) -> None:
         """The operator just gave a spoken command ("raise your hand if you hear me")."""
@@ -53,15 +61,22 @@ class SignsEstimator:
         for track_id in list(self.states):
             if track_id not in live:
                 del self.states[track_id]
+        camera, roll, shift = "fixed", 0.0, None
+        if self.camera_state is not None:
+            camera = self.camera.update(self.camera_state, image,
+                                        [track.bbox for track in tracks if track.detected], t)
+            roll, shift = self.camera_state.roll_deg, self.camera_state.last_shift_px
         for track in tracks:
             if not track.detected:
                 continue
             state = self.states.setdefault(track.track_id, _TrackSigns())
-            sample = self.motion.sample(track.bbox, track.keypoints, track.keypoint_conf, t)
+            sample = self.motion.sample(track.bbox, track.keypoints, track.keypoint_conf, t, camera, roll)
             self.motion.update(state.motion, sample)
             still = self.motion.movement(state.motion, t)["value"] == "still"
             if self.settings.breathing:
-                self.breathing.update(state.breathing, image, track.keypoints, track.keypoint_conf, still, t)
+                # Chest motion is only separable from camera motion on a still camera.
+                self.breathing.update(state.breathing, image, track.keypoints, track.keypoint_conf,
+                                      still and camera in IMAGE_FRAME, t, shift)
             if self.settings.eyes and self.eyes.due(state.eyes, t):
                 self.eyes.update(state.eyes, image, track.keypoints, track.keypoint_conf, t)
             if self.settings.blood and self.blood.due(state.blood, t):
@@ -86,6 +101,15 @@ class SignsEstimator:
             signs["breathing"] = self.breathing.value(state.breathing, t)
         if self.settings.blood:
             signs["visible_blood"] = self.blood.value(state.blood, t)
+        if self.camera_state is not None:
+            signs["camera_motion"] = self.camera.value(self.camera_state)
+            camera = self.camera_state.state
+            paused = ["breathing"] if camera not in IMAGE_FRAME else []
+            if camera == "moving":
+                paused += ["movement", "response"]
+            for name in paused:
+                if name in signs and signs[name]["value"] in ("not_testable", "not_tested"):
+                    signs[name] = {**signs[name], "reason": "camera_moving"}
         return signs
 
     def listening(self, track_id: str) -> bool:
@@ -97,18 +121,21 @@ def describe(signs: dict | None, listening: bool = False) -> list[str]:
     """Short overlay lines for one track's signs."""
     if not signs:
         return []
+    def text(sign: dict) -> str:
+        value = sign["value"].replace("_", " ")
+        return f"{value} (camera moves)" if sign.get("reason") == "camera_moving" else value
+
     movement = signs["movement"]
-    move = (f"still {movement['still_for_s']:.0f}s" if movement["value"] == "still"
-            else movement["value"].replace("_", " "))
-    response = "listening..." if listening else signs["response"]["value"].replace("_", " ")
+    move = f"still {movement['still_for_s']:.0f}s" if movement["value"] == "still" else text(movement)
+    response = "listening..." if listening else text(signs["response"])
     lines = [f"{move} | response: {response}"]
     parts = []
     if "eyes" in signs:
-        parts.append(f"eyes {signs['eyes']['value'].replace('_', ' ')}")
+        parts.append(f"eyes {text(signs['eyes'])}")
     if "breathing" in signs:
         breathing = signs["breathing"]
         parts.append(f"breath {breathing['rate_bpm']:.0f}/min" if breathing.get("rate_bpm")
-                     else f"breath {breathing['value'].replace('_', ' ')}")
+                     else f"breath {text(breathing)}")
     if parts:
         lines.append(" | ".join(parts))
     blood = signs.get("visible_blood")

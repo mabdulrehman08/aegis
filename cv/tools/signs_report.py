@@ -34,7 +34,7 @@ from cv.settings import CV_DIR, DEFAULT_CONFIG, load_settings
 
 log = logging.getLogger("cv.signs_report")
 OUT_DIR = CV_DIR / "eval" / "signs"
-SIGNS = ("posture", "movement", "response", "eyes", "breathing", "visible_blood")
+SIGNS = ("posture", "movement", "response", "eyes", "breathing", "visible_blood", "camera_motion")
 UNTESTABLE = {"not_testable", "not_tested", "unknown"}
 
 
@@ -50,6 +50,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expect", action="append", default=[], metavar="SIGN=VALUE",
                         help="expected value on the main track, e.g. eyes=closed (repeatable)")
     parser.add_argument("--min-seen-s", type=float, default=2.0, help="ignore tracks seen less than this")
+    parser.add_argument("--moving-camera", action="store_true",
+                        help="handheld / body-worn clip (config: signs.moving_camera)")
     parser.add_argument("--label", help="name in the report (default: file name)")
     parser.add_argument("--save-video", help="annotated copy for review (keep out of git)")
     parser.add_argument("--out-dir", default=str(OUT_DIR))
@@ -115,7 +117,8 @@ def run(args: argparse.Namespace) -> dict:
 
     expected = parse_expect(args.expect)
     settings = load_settings(args.config)
-    settings = replace(settings, signs=replace(settings.signs, enabled=True))
+    settings = replace(settings, signs=replace(settings.signs, enabled=True,
+                                               moving_camera=settings.signs.moving_camera or args.moving_camera))
     capture = cv2.VideoCapture(args.source)
     if not capture.isOpened():
         raise FileNotFoundError(f"Cannot open {args.source}")

@@ -139,7 +139,9 @@ class BreathingEstimator:
         self.settings = settings
         self.min_conf = min_conf
 
-    def update(self, state: BreathingState, image_bgr, keypoints, keypoint_conf, still: bool, t: float) -> None:
+    def update(self, state: BreathingState, image_bgr, keypoints, keypoint_conf, still: bool, t: float,
+               camera_shift: tuple[float, float] | None = None) -> None:
+        """``camera_shift``: this frame's background shift in image pixels, removed from the chest motion."""
         import cv2
 
         if not still:
@@ -158,6 +160,8 @@ class BreathingEstimator:
         if state.previous is not None and state.previous.shape == crop.shape:
             flow = cv2.calcOpticalFlowFarneback(state.previous, crop, None, 0.5, 2, 9, 2, 5, 1.1, 0)
             step = flow.reshape(-1, 2).mean(axis=0) / factor   # back to image pixels
+            if camera_shift is not None:
+                step = step - np.asarray(camera_shift, dtype=float)
             last = state.displacement[-1] if state.displacement else (0.0, 0.0)
             state.displacement.append((last[0] + float(step[0]), last[1] + float(step[1])))
             state.times.append(t)

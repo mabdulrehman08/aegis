@@ -9,6 +9,8 @@ Responsibilities:
 - Zones mode (no homography): the ground point picks a predefined zone, which
   only changes after ``zone_switch_frames`` consecutive frames in the new zone.
   The published position is then the zone's reference point, not a measurement.
+  With a current zone set (``set_current_zone``: the room a bodycam wearer is
+  in, picked by key), every detected person is in that zone.
 - Explicit uncertainty: ``detected`` (seen this frame), ``state``
   (visible / occluded / lost, debounced by ``occlusion_grace_s``), ``stale``,
   and ``mapping_valid``. Nothing is dropped silently.
@@ -92,6 +94,7 @@ class TrackManager:
         self.calibration = calibration
         self.zones = zones
         self.image_size = image_size
+        self.current_zone: str | None = None
         self.tracks: dict[str, Track] = {}
         self._raw_to_track: dict[int, str] = {}
         self._retired_unreported: list[Track] = []
@@ -108,6 +111,12 @@ class TrackManager:
 
     def set_zones(self, zones: ZoneMap | None, image_size: tuple[int, int] | None) -> None:
         self.zones, self.image_size = zones, image_size
+
+    def set_current_zone(self, zone_id: str | None) -> None:
+        if zone_id is not None and (self.zones is None
+                                    or zone_id not in {z.zone_id for z in self.zones.zones}):
+            raise ValueError(f"Unknown zone {zone_id!r}")
+        self.current_zone = zone_id
 
     def _to_floor(self, point) -> tuple[float, float] | None:
         return self.calibration.point_to_world(point) if self.calibration else None
@@ -231,6 +240,12 @@ class TrackManager:
             track.published_xy = (round(track.smoothed_xy[0], 2), round(track.smoothed_xy[1], 2))
 
     def _apply_zone(self, track: Track) -> None:
+        if self.current_zone is not None:  # picked by the operator: no hysteresis
+            zone = self.zones.get(self.current_zone)
+            track.mapping_valid = True
+            track.zone_id, track.published_xy = zone.zone_id, (zone.x_m, zone.y_m)
+            track.zone_candidate, track.zone_count = None, 0
+            return
         zone = self.zones.zone_at(track.ground_px, self.image_size)
         track.mapping_valid = zone is not None
         if zone is None or zone.zone_id == track.zone_id:

@@ -1,0 +1,41 @@
+# Body-worn or handheld camera (e.g. an iPhone on the chest via Continuity
+# Camera). The wearer presses 1-3 in the window on entering a room; everyone seen
+# is reported in that room (zone_estimate). Signs measure the camera's own
+# motion from the background (cv/signs/camera_motion.py):
+#   still  -> all signs as on a fixed camera
+#   steady -> movement relative to the body; breathing not testable
+#   moving -> movement, response and breathing paused (not testable, camera_moving)
+# Eyes, blood and posture are judged per frame and keep working.
+#
+#   python -m cv.main --config cv/config/bodycam.yaml --room room-1
+#   python -m cv.tools.signs_report --config cv/config/bodycam.yaml --source walk.mp4
+#
+# Rooms match cv/config/rooms.yaml.
+
+camera:
+  index: 2                # Continuity Camera; the order changes, check with the ffmpeg list in cv/README.md
+  width: 1280
+  height: 720
+  fps: 30
+
+mapping:
+  mode: zones
+  zone_select: keys
+  frame_id: demo-floor-1
+  zones:
+    - id: room-1
+      x_m: 3.0
+      y_m: 2.0
+    - id: room-2
+      x_m: 14.0
+      y_m: 8.0
+    - id: room-3
+      x_m: 18.0
+      y_m: 14.0
+
+signs:
+  enabled: true
+  moving_camera: true
+
+publisher:
+  camera_id: bodycam-1
