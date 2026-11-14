@@ -3,8 +3,9 @@
 Follow the backend (default): the device shows only assignments a human approved
 and dispatched for --responder, and button presses become device events.
 
-    uv run python -m hardware.bridge --sim                        # simulated device
-    uv run --with pyserial python -m hardware.bridge --port COM5  # real Arduino
+    uv run python -m hardware.bridge --sim                         # simulated device
+    uv run --with pyserial python -m hardware.bridge --port COM13  # Arduino on USB
+    uv run python -m hardware.bridge --wifi                        # Arduino on this laptop's hotspot
 
 Offline (no backend; manual test assignments, nothing is posted):
 
@@ -28,7 +29,7 @@ from .backend import BackendSync, device_label, http_requester
 from .bridge import Bridge
 from .events import JsonlLog
 from .sim_device import SimulatedDevice
-from .transport import LoopbackTransport, SerialTransport
+from .transport import DEFAULT_TCP_PORT, HOTSPOT_HOST, LoopbackTransport, SerialTransport, TcpDeviceServer
 
 BANNER = "=== AEGIS RESPONDER BRIDGE - SIMULATION ONLY: not a real dispatch system ==="
 
@@ -38,6 +39,9 @@ def main() -> int:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--port", help="Arduino serial port, e.g. COM5 or /dev/ttyACM0")
     source.add_argument("--sim", action="store_true", help="Use a simulated device instead of hardware")
+    source.add_argument("--wifi", nargs="?", const=f"{HOTSPOT_HOST}:{DEFAULT_TCP_PORT}", metavar="HOST:PORT",
+                        help=f"Device connects over WiFi to this laptop's hotspot "
+                             f"(default {HOTSPOT_HOST}:{DEFAULT_TCP_PORT})")
     parser.add_argument("--offline", action="store_true", help="No backend; manual test assignments")
     parser.add_argument("--scenario", default="demo")
     parser.add_argument("--responder", default="responder-001", help="Responder this device belongs to")
@@ -54,8 +58,15 @@ def main() -> int:
     print(BANNER)
 
     sim_device = SimulatedDevice() if args.sim else None
+    retry_every = 2.0
     if sim_device:
         factory = lambda: LoopbackTransport(sim_device, clock=time.monotonic)  # noqa: E731
+    elif args.wifi:
+        host, _, port = args.wifi.rpartition(":")
+        server = TcpDeviceServer(host or HOTSPOT_HOST, int(port))
+        factory = server.accept
+        retry_every = 0.3  # accepting is non-blocking, so check often
+        print(f"waiting for the responder device on WiFi at {server.host}:{server.port}")
     else:
         factory = lambda: SerialTransport(args.port)  # noqa: E731
 
@@ -78,10 +89,10 @@ def main() -> int:
     last_attempt = 0.0
     while True:
         try:
-            if not bridge.connected and time.monotonic() - last_attempt > 2.0:
+            if not bridge.connected and time.monotonic() - last_attempt > retry_every:
                 last_attempt = time.monotonic()
                 if bridge.connect():
-                    print(f"device connected: {bridge.device_id} fw={bridge.firmware}")
+                    print(f"device connected: {bridge.device_id} fw={bridge.firmware} link={bridge.link}")
             bridge.poll()
             if sync:
                 sync.tick()
@@ -118,7 +129,8 @@ def main() -> int:
 
 def print_status(bridge: Bridge, sync: BackendSync | None) -> None:
     a = bridge.active
-    print(f"device={bridge.device_id or 'DISCONNECTED'} showing={a.label + ' ' + a.token if a else 'nothing'}"
+    print(f"device={bridge.device_id or 'DISCONNECTED'} link={bridge.link} "
+          f"showing={a.label + ' ' + a.token if a else 'nothing'}"
           f" reported={sorted(a.reported) if a else []}")
     lat = bridge.stats.delivered_latencies_s
     if lat:

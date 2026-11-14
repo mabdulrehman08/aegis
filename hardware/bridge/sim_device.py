@@ -8,14 +8,14 @@ from collections import deque
 
 from .protocol import CMD_MAX, LABEL_MAX
 
-FW_VERSION = "0.1.0-sim"
+FW_VERSION = "0.2.0-sim"
 RETRY_S = 1.0
-MAX_RETRIES = 10
 
 
 class SimulatedDevice:
-    def __init__(self, device_id: str = "responder-device-sim") -> None:
+    def __init__(self, device_id: str = "responder-device-sim", link: str = "sim") -> None:
         self.device_id = device_id
+        self.link = link
         self.state = "IDLE"
         self.command_id = ""
         self.label = ""
@@ -34,7 +34,7 @@ class SimulatedDevice:
             return
         verb = t[0]
         if verb == "HELLO":
-            self._emit(f"HELLO aegis-responder fw={FW_VERSION} device={self.device_id}")
+            self._emit(f"HELLO aegis-responder fw={FW_VERSION} device={self.device_id} link={self.link}")
         elif verb == "PING":
             self._emit("PONG")
         elif verb == "ASSIGN":
@@ -80,11 +80,9 @@ class SimulatedDevice:
             self.display = "OK"
 
     def tick(self, now: float) -> None:
+        # Like the firmware: keep re-sending until the host confirms, so a press
+        # made while out of range is delivered after reconnecting.
         if not self._pending_kind or now - self._pending_sent_at < RETRY_S:
-            return
-        if self._pending_retries >= MAX_RETRIES:
-            self._emit(f"ERR no_host_ok {self._pending_kind}")
-            self._pending_kind = ""
             return
         self._pending_retries += 1
         self._pending_sent_at = now

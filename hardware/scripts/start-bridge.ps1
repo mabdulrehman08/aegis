@@ -26,6 +26,8 @@ param(
     [int]$BackendPort = 8000,
     [string]$Port,                      # Arduino COM port; auto-detected when omitted
     [switch]$Sim,                       # simulated device instead of the Arduino
+    [switch]$Wifi,                      # Arduino carried by the responder, on this laptop's hotspot
+    [string]$WifiListen = "192.168.137.1:7777",  # for a phone hotspot: this laptop's IP there, e.g. 172.20.10.4:7777
     [switch]$Local,                     # backend runs on this laptop (no Tailscale needed)
     [string]$Responder = "responder-001",
     [double]$HttpTimeout = 3.0,         # generous for crowded WiFi
@@ -117,6 +119,13 @@ Say "Backend healthy." "Green"
 if ($Sim) {
     $deviceArgs = @("--sim")
     Say "Device: simulated (type 'press' / 'long' for the button)"
+} elseif ($Wifi) {
+    if ($WifiListen -like "192.168.137.1:*" -and -not $CheckOnly) {
+        & (Join-Path $PSScriptRoot "start-hotspot.ps1")
+        if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { Fail "Hotspot did not start." }
+    }
+    $deviceArgs = @("--wifi", $WifiListen)
+    Say "Device: Arduino over WiFi; bridge listens on $WifiListen" "Green"
 } else {
     if (-not $Port) { $Port = Find-Arduino }
     if (-not $Port) { Fail "No Arduino found. Plug it in by USB, or pass -Port COMx (see 'arduino-cli board list')." }

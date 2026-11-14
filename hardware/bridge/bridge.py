@@ -19,6 +19,8 @@ log = logging.getLogger("aegis.hardware")
 ASSIGN_RETRY_S = 1.0
 ASSIGN_MAX_RETRIES = 5
 HANDSHAKE_TIMEOUT_S = 3.0
+PING_EVERY_S = 2.0
+LINK_TIMEOUT_S = 7.0  # no line from the device for this long = out of range / unplugged
 
 
 @dataclass
@@ -62,8 +64,11 @@ class Bridge:
         self.clock = clock
         self.device_id: str | None = None
         self.firmware: str | None = None
+        self.link: str | None = None
         self.active: ActiveAssignment | None = None
         self.stats = BridgeStats()
+        self._last_rx = 0.0
+        self._last_ping = 0.0
 
     # ------------------------------------------------------------ connection
 
@@ -84,6 +89,7 @@ class Bridge:
                         fields = dict(a.split("=", 1) for a in msg.args if "=" in a)
                         self.device_id = fields.get("device")
                         self.firmware = fields.get("fw")
+                        self.link = fields.get("link")
                 if not self.device_id:
                     time.sleep(0.02)
         except TransportError as exc:
@@ -94,7 +100,8 @@ class Bridge:
             log.warning("device did not answer HELLO")
             self._drop_transport()
             return False
-        log.info("connected to %s (fw %s)", self.device_id, self.firmware)
+        log.info("connected to %s (fw %s, link %s)", self.device_id, self.firmware, self.link)
+        self._last_rx = self._last_ping = self.clock()
         if self.active and not self.active.finished:
             # Re-show an unfinished assignment after a reconnect or device reboot.
             # Same token keeps the device's progress; a different one replaces it.
@@ -109,6 +116,7 @@ class Bridge:
             self._transport.close()
         self._transport = None
         self.device_id = None
+        self.link = None
 
     def _send(self, line: str) -> None:
         if self._transport is None:
@@ -145,8 +153,17 @@ class Bridge:
         if self._transport is None:
             return
         try:
-            for line in self._transport.read_lines():
+            lines = self._transport.read_lines()
+            now = self.clock()
+            if lines:
+                self._last_rx = now
+            for line in lines:
                 self._handle_line(line)
+            if now - self._last_rx > LINK_TIMEOUT_S:
+                raise TransportError(f"no reply from device for {now - self._last_rx:.0f} s")
+            if now - self._last_ping >= PING_EVERY_S:
+                self._last_ping = now
+                self._send("PING")
             self._retry_assign()
         except TransportError as exc:
             log.warning("device link lost: %s", exc)

@@ -30,10 +30,12 @@ Grove Base Shield on the UNO R4 WiFi: **button → D2**, **LED → D4**, USB to 
 ```sh
 arduino-cli core install arduino:renesas_uno
 arduino-cli lib install ArduinoGraphics
-arduino-cli board list                      # find the port, e.g. COM5
-arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi hardware/firmware/aegis_responder
-arduino-cli upload  --fqbn arduino:renesas_uno:unor4wifi -p COM5 hardware/firmware/aegis_responder
+arduino-cli board list                      # find the port (Muhammad's board: COM13)
+arduino-cli compile --upload --fqbn arduino:renesas_uno:unor4wifi -p COM13 hardware/firmware/aegis_responder
 ```
+
+Always `compile --upload` together: a bare `upload` flashes whatever was compiled
+last. If it says `No device found`, double-tap the board's RESET button and retry.
 
 ## Run it with the backend
 
@@ -42,7 +44,7 @@ From the repository root, in three terminals:
 ```sh
 uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8000                 # 1. backend
 uv run python -m scripts.live_demo --base-url http://127.0.0.1:8000 --prepare-only # 2. scene (once)
-uv run --with pyserial python -m hardware.bridge --port COM5                      # 3. bridge
+uv run --with pyserial python -m hardware.bridge --port COM13                     # 3. bridge (USB)
 ```
 
 Without the board, replace step 3 with `uv run python -m hardware.bridge --sim`
@@ -54,6 +56,52 @@ delivery latency, posted/queued events and any rejections.
 
 Do not run the full `scripts.live_demo --base-url` rehearsal while the bridge is
 connected; it dispatches and acknowledges on its own.
+
+## Wireless: the responder carries the device
+
+The responder walks around with the Arduino, so it runs on a **USB power bank**
+and talks to the bridge laptop over WiFi:
+
+```
+Arduino (responder, power bank) --WiFi--> bridge laptop's own hotspot (192.168.137.1:7777)
+bridge laptop --Tailscale over campus WiFi--> backend laptop
+```
+
+The Arduino cannot join eduroam (WPA2-Enterprise) or click through a guest
+sign-in page, and it only has 2.4 GHz. The bridge laptop therefore runs its own
+2.4 GHz Windows Mobile Hotspot, which only the team's device joins, so campus
+crowding does not matter and the laptop's address is always `192.168.137.1`.
+
+1. Start the hotspot. The first run creates the git-ignored
+   `firmware/aegis_responder/arduino_secrets.h` with the hotspot name and a random password:
+   ```powershell
+   .\hardware\scripts\start-hotspot.ps1          # -Status to inspect, -Stop to turn off
+   ```
+2. Flash the WiFi build (it is chosen automatically when `arduino_secrets.h` exists).
+   Always compile and upload together so a stale build is never flashed:
+   ```powershell
+   arduino-cli compile --upload --fqbn arduino:renesas_uno:unor4wifi -p COM13 hardware/firmware/aegis_responder
+   ```
+   If the upload says `No device found`, **double-tap the board's RESET button**
+   (the LED near it pulses) and run the command again within a few seconds.
+3. Unplug the Arduino from the laptop, power it from a power bank, and start the bridge:
+   ```powershell
+   .\hardware\scripts\start-bridge.ps1 -Wifi -Backend <backend-machine-name>
+   ```
+
+Device behaviour on WiFi: the matrix shows `--` while it is not connected to the
+bridge. The bridge pings every 2 s and treats 7 s of silence as "out of range".
+The device rejoins on its own when back in range, keeps the assignment it was
+showing, and re-sends a button press made out of range until the bridge confirms
+it. While searching for WiFi the device stays responsive (the join runs in the
+background), and USB keeps working as a fallback.
+
+**Network rules:** Windows Mobile Hotspot shares the laptop's connection (eduroam).
+Check the university allows it. The alternative is a phone hotspot that both the
+Arduino and the bridge laptop join: set `BRIDGE_HOST` in `arduino_secrets.h` to the
+laptop's address on it and run `start-bridge.ps1 -Wifi -WifiListen <that-ip>:7777`.
+The device port is unauthenticated, so the bridge only listens on the hotspot
+address, never on the campus network.
 
 ## On university WiFi: Tailscale
 
