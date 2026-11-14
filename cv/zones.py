@@ -37,15 +37,7 @@ class Zone:
     polygon: tuple[tuple[float, float], ...] = FULL_FRAME
 
     def contains(self, u: float, v: float) -> bool:
-        """Point-in-polygon in normalized coordinates; the boundary counts as inside."""
-        points = self.polygon
-        inside = False
-        for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1]):
-            if _on_segment(u, v, x1, y1, x2, y2):
-                return True
-            if (y1 > v) != (y2 > v) and u < x1 + (v - y1) * (x2 - x1) / (y2 - y1):
-                inside = not inside
-        return inside
+        return point_in_polygon(self.polygon, u, v)
 
 
 @dataclass(frozen=True)
@@ -116,6 +108,18 @@ def _polygon(value: Any, where: str) -> tuple[tuple[float, float], ...]:
             raise ZoneError(f"{where}: coordinates are normalized to 0..1")
         points.append((u, v))
     return tuple(points)
+
+
+def point_in_polygon(polygon: Sequence[Sequence[float]], u: float, v: float) -> bool:
+    """Even-odd rule; the boundary counts as inside."""
+    points = [tuple(p) for p in polygon]
+    inside = False
+    for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1]):
+        if _on_segment(u, v, x1, y1, x2, y2):
+            return True
+        if (y1 > v) != (y2 > v) and u < x1 + (v - y1) * (x2 - x1) / (y2 - y1):
+            inside = not inside
+    return inside
 
 
 def _on_segment(u, v, x1, y1, x2, y2, eps: float = 1e-9) -> bool:

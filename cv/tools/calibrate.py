@@ -12,6 +12,10 @@ Enter coordinates in the shared scenario frame (``--frame-id``), +x right/east,
 +y up/north. ``--offset X Y`` is added to every entered point, so a tape-measured
 local square can be placed at a known spot of the scene map.
 
+Before saving, the staged area (hull of the points) is checked against the
+running backend's scene map: it must lie inside the map on walkable cells.
+``--no-map-check`` skips this; with ``--yes`` a failed check does not save.
+
 Non-interactive (scripts / tests):
     python -m cv.tools.calibrate --image frame.png \
         --points "100,600;1180,600;1000,300;280,300" --world "0,0;3,0;3,3;0,3" --yes
@@ -173,6 +177,29 @@ def report(calibration: Calibration) -> None:
               "       Add a 5th/6th point (or run the mapping evaluation) for a real accuracy check.")
 
 
+def map_check(calibration: Calibration, base_url: str, scenario_id: str) -> bool | None:
+    """True/False = walkable or not; None = could not check (no backend or no map)."""
+    from cv.scene_map import check_area, describe, fetch_scene_map
+
+    try:
+        scene_map = fetch_scene_map(base_url, scenario_id)
+    except Exception as error:
+        print(f"\n Map check skipped: cannot read the {scenario_id!r} scene map from {base_url} "
+              f"({type(error).__name__}). Start the backend to verify the staged area.")
+        return None
+    if not scene_map:
+        print(f"\n Map check skipped: scenario {scenario_id!r} has no scene map "
+              "(reset it with add_demo_map: true).")
+        return None
+    if scene_map.get("frame_id") != calibration.frame_id:
+        print(f"\n NOT WALKABLE: the map uses frame {scene_map.get('frame_id')!r}, "
+              f"the calibration {calibration.frame_id!r}.")
+        return False
+    check = check_area(scene_map, calibration.world_points)
+    print("\n " + describe(check))
+    return check.walkable
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="AEGIS floor calibration")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
@@ -184,6 +211,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="added to every world point")
     parser.add_argument("--frame-id", help="scene frame (default from config mapping.frame_id)")
     parser.add_argument("--output", help="default: config mapping.homography")
+    parser.add_argument("--backend-url", help="backend for the map check (default: config)")
+    parser.add_argument("--scenario", help="scenario for the map check (default: config)")
+    parser.add_argument("--no-map-check", action="store_true",
+                        help="do not check the staged area against the scene map")
     parser.add_argument("--yes", action="store_true", help="save without asking / no windows")
     args = parser.parse_args(argv)
 
@@ -227,6 +258,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
     report(calibration)
+    walkable = None
+    if not args.no_map_check:
+        walkable = map_check(calibration, args.backend_url or settings.publisher.base_url,
+                             args.scenario or settings.publisher.scenario_id)
+        if walkable is False and not interactive:
+            print("Not saved: the staged area is not walkable on the scene map "
+                  "(fix --offset / the points, or pass --no-map-check).", file=sys.stderr)
+            return 3
 
     if interactive:
         import cv2
@@ -234,7 +273,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         cv2.imshow(WINDOW, draw_verification(image, calibration))
         print("\nCheck the window: the blue 0.5 m grid should lie flat on the floor.")
         cv2.waitKey(1)
-        answer = input(f"Save to {output}? [y/N] ").strip().lower()
+        warning = "The area is NOT walkable. " if walkable is False else ""
+        answer = input(f"{warning}Save to {output}? [y/N] ").strip().lower()
         cv2.destroyAllWindows()
         if answer != "y":
             print("Not saved.")
