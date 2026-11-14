@@ -1,0 +1,11 @@
+# Perception (CV & mapping) dependencies. Kept separate from the root
+# pyproject.toml / uv.lock, which belong to the backend and must stay light.
+ultralytics>=8.3,<9
+opencv-python>=4.9
+numpy>=1.26
+scipy>=1.11
+PyYAML>=6
+requests>=2.31
+lap>=0.5.12
+mediapipe>=0.10.14   # eye open/closed (Face Landmarker blendshapes)
+pytest>=8

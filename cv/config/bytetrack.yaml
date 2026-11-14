@@ -1,0 +1,9 @@
+# ByteTrack for mostly-static casualties on the floor. Same as the Ultralytics
+# default except a longer track_buffer, so short occlusions keep the same ID.
+tracker_type: bytetrack
+track_high_thresh: 0.25
+track_low_thresh: 0.1
+new_track_thresh: 0.3
+track_buffer: 90
+match_thresh: 0.8
+fuse_score: True

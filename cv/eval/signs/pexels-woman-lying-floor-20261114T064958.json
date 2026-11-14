@@ -1,0 +1,317 @@
+{
+  "run_at_utc": "2026-11-14T06:49:58.059Z",
+  "label": "pexels-woman-lying-floor",
+  "source": "pexels-woman-lying-floor.mp4",
+  "frames": 564,
+  "duration_s": 23.5,
+  "fps": 24.0,
+  "size": [
+    1280,
+    674
+  ],
+  "commands_at_s": [],
+  "expected": {
+    "movement": "still",
+    "eyes": "closed",
+    "breathing": "motion_detected",
+    "visible_blood": "not_detected"
+  },
+  "main_track": "t2",
+  "tracks": {
+    "t2": {
+      "seen_s": 20.0,
+      "samples": 21,
+      "seen_from_s": 2.8,
+      "seen_to_s": 22.8,
+      "signs": {
+        "posture": {
+          "share_pct": {
+            "lying": 95.2,
+            "unknown": 4.8
+          },
+          "first_at_s": {
+            "unknown": 2.8,
+            "lying": 3.8
+          },
+          "changes": [
+            [
+              2.8,
+              "unknown"
+            ],
+            [
+              3.8,
+              "lying"
+            ]
+          ]
+        },
+        "movement": {
+          "share_pct": {
+            "moving": 76.2,
+            "still": 19.0,
+            "not_testable": 4.8
+          },
+          "first_at_s": {
+            "not_testable": 2.8,
+            "moving": 3.8,
+            "still": 11.8
+          },
+          "changes": [
+            [
+              2.8,
+              "not_testable"
+            ],
+            [
+              3.8,
+              "moving"
+            ],
+            [
+              11.8,
+              "still"
+            ],
+            [
+              14.8,
+              "moving"
+            ],
+            [
+              18.8,
+              "still"
+            ],
+            [
+              19.8,
+              "moving"
+            ]
+          ],
+          "expected": "still",
+          "agreement_pct": 19.0,
+          "agreement_testable_pct": 20.0,
+          "testable_pct": 95.2
+        },
+        "response": {
+          "share_pct": {
+            "not_tested": 100.0
+          },
+          "first_at_s": {
+            "not_tested": 2.8
+          },
+          "changes": [
+            [
+              2.8,
+              "not_tested"
+            ]
+          ]
+        },
+        "eyes": {
+          "share_pct": {
+            "open": 85.7,
+            "not_testable": 14.3
+          },
+          "first_at_s": {
+            "not_testable": 2.8,
+            "open": 5.8
+          },
+          "changes": [
+            [
+              2.8,
+              "not_testable"
+            ],
+            [
+              5.8,
+              "open"
+            ]
+          ],
+          "expected": "closed",
+          "agreement_pct": 0.0,
+          "agreement_testable_pct": 0.0,
+          "testable_pct": 85.7
+        },
+        "breathing": {
+          "share_pct": {
+            "not_testable": 100.0
+          },
+          "first_at_s": {
+            "not_testable": 2.8
+          },
+          "changes": [
+            [
+              2.8,
+              "not_testable"
+            ]
+          ],
+          "expected": "motion_detected",
+          "agreement_pct": 0.0,
+          "agreement_testable_pct": null,
+          "testable_pct": 0.0
+        },
+        "visible_blood": {
+          "share_pct": {
+            "detected": 61.9,
+            "not_detected": 28.6,
+            "not_testable": 9.5
+          },
+          "first_at_s": {
+            "not_testable": 2.8,
+            "not_detected": 4.8,
+            "detected": 8.8
+          },
+          "changes": [
+            [
+              2.8,
+              "not_testable"
+            ],
+            [
+              4.8,
+              "not_detected"
+            ],
+            [
+              8.8,
+              "detected"
+            ],
+            [
+              21.8,
+              "not_detected"
+            ]
+          ],
+          "regions": {
+            "right_arm": 13
+          },
+          "expected": "not_detected",
+          "agreement_pct": 28.6,
+          "agreement_testable_pct": 31.6,
+          "testable_pct": 90.5
+        }
+      }
+    },
+    "t1": {
+      "seen_s": 4.3,
+      "samples": 7,
+      "seen_from_s": 0.0,
+      "seen_to_s": 6.2,
+      "signs": {
+        "posture": {
+          "share_pct": {
+            "lying": 85.7,
+            "unknown": 14.3
+          },
+          "first_at_s": {
+            "lying": 0.0,
+            "unknown": 6.2
+          },
+          "changes": [
+            [
+              0.0,
+              "lying"
+            ],
+            [
+              6.2,
+              "unknown"
+            ]
+          ]
+        },
+        "movement": {
+          "share_pct": {
+            "moving": 85.7,
+            "not_testable": 14.3
+          },
+          "first_at_s": {
+            "not_testable": 0.0,
+            "moving": 1.2
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ],
+            [
+              1.2,
+              "moving"
+            ]
+          ],
+          "expected": "still",
+          "agreement_pct": 0.0,
+          "agreement_testable_pct": 0.0,
+          "testable_pct": 85.7
+        },
+        "response": {
+          "share_pct": {
+            "not_tested": 100.0
+          },
+          "first_at_s": {
+            "not_tested": 0.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_tested"
+            ]
+          ]
+        },
+        "eyes": {
+          "share_pct": {
+            "not_testable": 100.0
+          },
+          "first_at_s": {
+            "not_testable": 0.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ]
+          ],
+          "expected": "closed",
+          "agreement_pct": 0.0,
+          "agreement_testable_pct": null,
+          "testable_pct": 0.0
+        },
+        "breathing": {
+          "share_pct": {
+            "not_testable": 100.0
+          },
+          "first_at_s": {
+            "not_testable": 0.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ]
+          ],
+          "expected": "motion_detected",
+          "agreement_pct": 0.0,
+          "agreement_testable_pct": null,
+          "testable_pct": 0.0
+        },
+        "visible_blood": {
+          "share_pct": {
+            "detected": 85.7,
+            "not_testable": 14.3
+          },
+          "first_at_s": {
+            "not_testable": 0.0,
+            "detected": 1.2
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ],
+            [
+              1.2,
+              "detected"
+            ]
+          ],
+          "regions": {
+            "head": 6
+          },
+          "expected": "not_detected",
+          "agreement_pct": 0.0,
+          "agreement_testable_pct": 0.0,
+          "testable_pct": 85.7
+        }
+      }
+    }
+  },
+  "tracks_ignored": 1,
+  "eye_model_available": true,
+  "processing_fps": 49.3
+}

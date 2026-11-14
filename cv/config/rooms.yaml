@@ -1,0 +1,33 @@
+# A fixed camera in any room, no floor calibration (no tape). Each room is a zone
+# with one reference point on the 24 x 20 m demo map; everyone this camera sees
+# is reported in the room picked with --room (or keys 1-3 in the window). The
+# backend places them at the room's point and labels it a zone_estimate.
+# Unlisted settings use the defaults in cv/settings.py (same as pipeline.yaml).
+#
+#   python -m cv.main --config cv/config/rooms.yaml --room room-2 --signs
+#   python -m cv.main --config cv/config/rooms.yaml --room room-3 --camera 1 --camera-id room-cam-2
+#
+# Each physical camera needs its own --camera-id. The room list is registered
+# with the backend once per epoch, so keep it the same for a camera ID until reset.
+# The points are walkable cells of the demo map (cv/tests/test_rooms.py checks it).
+
+camera:
+  index: 0
+
+mapping:
+  mode: zones
+  zone_select: keys
+  frame_id: demo-floor-1
+  zones:
+    - id: room-1          # west of the wall (the phone's zone-b point)
+      x_m: 3.0
+      y_m: 2.0
+    - id: room-2          # center, the staged area at offset (12, 6)
+      x_m: 14.0
+      y_m: 8.0
+    - id: room-3          # north-east
+      x_m: 18.0
+      y_m: 14.0
+
+publisher:
+  camera_id: room-cam-1

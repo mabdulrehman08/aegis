@@ -1,0 +1,152 @@
+{
+  "run_at_utc": "2026-11-14T06:48:45.959Z",
+  "label": "eyes-closed-man",
+  "source": "pexels-man-eyes-closed-breathing.mp4",
+  "frames": 185,
+  "duration_s": 7.4,
+  "fps": 25.0,
+  "size": [
+    1280,
+    720
+  ],
+  "commands_at_s": [],
+  "expected": {
+    "eyes": "closed"
+  },
+  "main_track": "t1",
+  "tracks": {
+    "t1": {
+      "seen_s": 7.4,
+      "samples": 8,
+      "seen_from_s": 0.0,
+      "seen_to_s": 7.0,
+      "signs": {
+        "posture": {
+          "share_pct": {
+            "lying": 87.5,
+            "unknown": 12.5
+          },
+          "first_at_s": {
+            "lying": 0.0,
+            "unknown": 7.0
+          },
+          "changes": [
+            [
+              0.0,
+              "lying"
+            ],
+            [
+              7.0,
+              "unknown"
+            ]
+          ]
+        },
+        "movement": {
+          "share_pct": {
+            "still": 62.5,
+            "moving": 25.0,
+            "not_testable": 12.5
+          },
+          "first_at_s": {
+            "not_testable": 0.0,
+            "moving": 1.0,
+            "still": 2.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ],
+            [
+              1.0,
+              "moving"
+            ],
+            [
+              2.0,
+              "still"
+            ],
+            [
+              7.0,
+              "moving"
+            ]
+          ]
+        },
+        "response": {
+          "share_pct": {
+            "not_tested": 100.0
+          },
+          "first_at_s": {
+            "not_tested": 0.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_tested"
+            ]
+          ]
+        },
+        "eyes": {
+          "share_pct": {
+            "closed": 87.5,
+            "not_testable": 12.5
+          },
+          "first_at_s": {
+            "not_testable": 0.0,
+            "closed": 1.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ],
+            [
+              1.0,
+              "closed"
+            ]
+          ],
+          "expected": "closed",
+          "agreement_pct": 87.5,
+          "agreement_testable_pct": 100.0,
+          "testable_pct": 87.5
+        },
+        "breathing": {
+          "share_pct": {
+            "not_testable": 100.0
+          },
+          "first_at_s": {
+            "not_testable": 0.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ]
+          ]
+        },
+        "visible_blood": {
+          "share_pct": {
+            "not_detected": 87.5,
+            "not_testable": 12.5
+          },
+          "first_at_s": {
+            "not_testable": 0.0,
+            "not_detected": 1.0
+          },
+          "changes": [
+            [
+              0.0,
+              "not_testable"
+            ],
+            [
+              1.0,
+              "not_detected"
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "tracks_ignored": 0,
+  "eye_model_available": true,
+  "processing_fps": 50.0
+}

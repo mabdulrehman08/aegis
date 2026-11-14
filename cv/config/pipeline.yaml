@@ -1,0 +1,76 @@
+# AEGIS CV pipeline settings. Relative paths resolve against this
+# directory (cv/config/). Unknown keys are rejected.
+
+camera:
+  index: 0                  # Logitech is not always 0 on macOS; try 1 or 2
+  width: 1280
+  height: 720
+  fps: 30
+  reconnect_after_s: 2.0    # consecutive read failures before reopening
+  retry_interval_s: 1.0     # wait between reopen attempts
+
+detector:
+  model: yolo11n-pose.pt    # keypoints drive posture and the lying ground point
+  conf: 0.25                # low so ByteTrack can recover weak detections
+  imgsz: 640
+  device: auto              # auto = MPS on Apple silicon, else CPU
+  tracker: bytetrack.yaml
+
+mapping:
+  mode: calibrated              # calibrated = homography; zones = see config/phone.yaml
+  homography: homography.json   # written by cv.tools.calibrate
+  frame_id: demo-floor-1        # default frame for calibration; must match the scenario
+
+tracking:
+  occlusion_grace_s: 0.5    # published state stays "visible" through brief misses
+  stale_after_s: 2.0        # internal stale flag (not seen for this long)
+  lost_after_s: 30.0        # then one "lost" report and the ID is retired
+  position_alpha: 0.35      # EMA smoothing of the mapped floor position
+  confidence_alpha: 0.3     # EMA smoothing of detector confidence
+  deadband_m: 0.15          # published position only moves beyond this
+  posture_window: 15        # frames in the posture majority vote
+  keypoint_min_conf: 0.5
+  lying_max_torso_m: 0.75   # shoulder-hip distance on the floor plane below this = lying
+  reattach: true            # a new tracker ID near an occluded track resumes that track
+  reattach_radius_m: 0.6
+  reattach_radius_frac: 0.08  # zones mode: same, as a fraction of the frame diagonal
+  zone_switch_frames: 5       # zones mode: frames in a new zone before switching
+
+# Observed signs (cv/signs/): observations with confidence and not_testable,
+# never a diagnosis, severity or priority. --signs turns them on for one run.
+signs:
+  enabled: false
+  window_s: 10.0
+  motion_lag_s: 1.0           # keypoints compared with this long ago
+  move_threshold: 0.06        # 75th-percentile keypoint shift / body scale = "moving"
+  still_after_s: 2.0
+  command_window_s: 8.0       # after pressing c: time allowed for a response
+  response_threshold: 0.15    # limb shift / body scale vs pose at the command
+  eyes: true                  # MediaPipe Face Landmarker blink scores (model auto-downloads)
+  eyes_hz: 3.0
+  eyes_window_s: 3.0
+  eyes_closed_threshold: 0.4  # CEW faces: 0.5 = 92% (closed recall 85%); 0.4 is near the best (96%)
+  eyes_min_face_px: 36        # smaller faces are not_testable; use 1080p for eyes at range
+  blood: true                 # saturated red inside body regions (color detector)
+  blood_hz: 3.0
+  blood_min_fraction: 0.04
+  blood_min_pixels: 60
+  blood_max_gb_ratio: 0.35    # green/blue <= this x red. Skin ~0.45; raise for thin smears, check skin stays clean
+  breathing: true             # torso optical flow while still, FFT rate
+  breathing_window_s: 15.0
+  breathing_min_bpm: 6.0
+  breathing_max_bpm: 40.0
+  breathing_min_snr: 40.0     # higher = fewer false "breathing" calls, more not_testable
+
+publisher:
+  base_url: http://127.0.0.1:8000
+  scenario_id: demo
+  endpoint: camera          # camera = /cameras/{camera_id}/observations; legacy = /observations
+  camera_id: logitech-1
+  actor: cv-askar
+  rate_hz: 5.0              # publish tick
+  heartbeat_s: 1.0          # unchanged tracks are re-sent at this interval
+  timeout_s: 1.5
+  max_backoff_s: 5.0
+  mock_log: artifacts/mock_{camera_id}.jsonl   # relative to cv/
+  send_signs: false         # true only once the backend accepts "signs" (cv/CONTRACT_PROPOSAL.md)
