@@ -2,9 +2,9 @@
 
 Runs person-only YOLO detection on the live webcam (or a video file), shows
 annotated frames, and appends one row of measured numbers per run to
-``perception/eval/detection_runs.csv`` so models can be compared per scenario.
+``cv/eval/detection_runs.csv`` so models can be compared per scenario.
 
-    python -m perception.tools.detection_test --model yolo11n.pt --expected 3 \
+    python -m cv.tools.detection_test --model yolo11n.pt --expected 3 \
         --scenario lying_side_partial_occlusion --duration 20
 
 It reports detections only. Nothing here infers injury, severity or triage,
@@ -22,9 +22,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
-PERCEPTION_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_CSV = PERCEPTION_DIR / "eval" / "detection_runs.csv"
-MODELS_DIR = PERCEPTION_DIR / "models"
+CV_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_CSV = CV_DIR / "eval" / "detection_runs.csv"
+MODELS_DIR = CV_DIR / "models"
 PERSON_CLASS = 0
 WINDOW = "AEGIS detection test (q / Esc to stop)"
 MAX_READ_FAILURES_S = 3.0
@@ -106,7 +106,7 @@ def append_csv(path: Path, row: dict[str, Any]) -> None:
 
 
 def resolve_model(name: str) -> str:
-    """Keep downloaded weights in perception/models/ instead of the working dir."""
+    """Keep downloaded weights in cv/models/ instead of the working dir."""
     candidate = Path(name)
     if candidate.exists() or candidate.parent != Path("."):
         return name

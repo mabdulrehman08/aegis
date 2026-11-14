@@ -1,8 +1,8 @@
 import pytest
 
-from perception.homography import ground_point
-from perception.observations import PostureEstimate, classify_posture, vote_posture
-from perception.tests.helpers import keypoints, pinhole_calibration, world_to_pixel
+from cv.homography import ground_point
+from cv.observations import PostureEstimate, classify_posture, vote_posture
+from cv.tests.helpers import keypoints, pinhole_calibration, world_to_pixel
 
 BOX = (100.0, 200.0, 300.0, 600.0)
 

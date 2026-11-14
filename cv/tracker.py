@@ -17,10 +17,10 @@ import math
 from collections import deque
 from dataclasses import dataclass, field
 
-from perception.detector import Detection
-from perception.homography import Calibration, ground_point
-from perception.observations import UNKNOWN_POSTURE, PostureEstimate, classify_posture, vote_posture
-from perception.settings import TrackingSettings
+from cv.detector import Detection
+from cv.homography import Calibration, ground_point
+from cv.observations import UNKNOWN_POSTURE, PostureEstimate, classify_posture, vote_posture
+from cv.settings import TrackingSettings
 
 
 @dataclass

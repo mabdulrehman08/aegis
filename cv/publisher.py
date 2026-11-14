@@ -31,9 +31,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from perception.clock import Timebase
-from perception.settings import PublisherSettings
-from perception.tracker import TrackReport
+from cv.clock import Timebase
+from cv.settings import PublisherSettings
+from cv.tracker import TrackReport
 
 log = logging.getLogger(__name__)
 MIN_CONFIDENCE_BUCKET = 0.5  # backend treats crossing this as an impactful change

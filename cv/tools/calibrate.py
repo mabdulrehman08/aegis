@@ -1,7 +1,7 @@
 """Floor calibration: click reference points on a frozen frame, enter their
 real-world coordinates in meters, save the homography.
 
-    python -m perception.tools.calibrate --camera 0
+    python -m cv.tools.calibrate --camera 0
 
 Live view: SPACE freezes the frame (q quits).
 Frozen frame: left-click to add a point, right-click or Backspace to undo,
@@ -13,7 +13,7 @@ Enter coordinates in the shared scenario frame (``--frame-id``), +x right/east,
 local square can be placed at a known spot of the scene map.
 
 Non-interactive (scripts / tests):
-    python -m perception.tools.calibrate --image frame.png \
+    python -m cv.tools.calibrate --image frame.png \
         --points "100,600;1180,600;1000,300;280,300" --world "0,0;3,0;3,3;0,3" --yes
 """
 
@@ -26,8 +26,8 @@ from typing import Sequence
 
 import numpy as np
 
-from perception.homography import Calibration, CalibrationError, build_calibration
-from perception.settings import DEFAULT_CONFIG, load_settings, resolve
+from cv.homography import Calibration, CalibrationError, build_calibration
+from cv.settings import DEFAULT_CONFIG, load_settings, resolve
 
 WINDOW = "AEGIS calibration"
 
@@ -54,7 +54,7 @@ def grab_frame(args: argparse.Namespace, settings) -> np.ndarray | None:
             print(f"ERROR: cannot read {args.image}", file=sys.stderr)
         return image
 
-    from perception.camera import Camera
+    from cv.camera import Camera
 
     camera = Camera(settings.camera)
     print("Live view: SPACE to freeze the frame, q to quit.")
@@ -160,7 +160,7 @@ def draw_verification(image: np.ndarray, calibration: Calibration, step_m: float
 
 
 def report(calibration: Calibration) -> None:
-    from perception.homography import reprojection_errors
+    from cv.homography import reprojection_errors
 
     errors = reprojection_errors(calibration.homography, calibration.image_points, calibration.world_points)
     print("\n point |   image (px)    |  world (m)     | reprojection error")

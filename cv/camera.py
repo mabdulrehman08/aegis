@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from perception.settings import CameraSettings
+from cv.settings import CameraSettings
 
 log = logging.getLogger(__name__)
 

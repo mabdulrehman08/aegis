@@ -1,6 +1,6 @@
-from perception.settings import TrackingSettings
-from perception.tests.helpers import det, scale_calibration, standing_box
-from perception.tracker import TrackManager
+from cv.settings import TrackingSettings
+from cv.tests.helpers import det, scale_calibration, standing_box
+from cv.tracker import TrackManager
 
 SETTINGS = TrackingSettings(occlusion_grace_s=0.5, stale_after_s=2.0, lost_after_s=10.0,
                             position_alpha=1.0, deadband_m=0.15, reattach_radius_m=0.6)

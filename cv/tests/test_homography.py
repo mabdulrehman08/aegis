@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
 
-from perception.homography import (
+from cv.homography import (
     Calibration,
     CalibrationError,
     build_calibration,
     compute_homography,
     reprojection_errors,
 )
-from perception.tests.helpers import FLOOR_SQUARE, pinhole_calibration, world_to_pixel
+from cv.tests.helpers import FLOOR_SQUARE, pinhole_calibration, world_to_pixel
 
 
 def test_four_points_recover_the_floor_plane_exactly():
@@ -72,5 +72,5 @@ def test_json_round_trip(tmp_path):
     loaded = Calibration.load(path)
     assert loaded.frame_id == "demo-floor-1"
     assert loaded.calibration_ref == calibration.calibration_ref
-    assert loaded.calibration_ref.startswith("perception-demo-floor-1-")
+    assert loaded.calibration_ref.startswith("cv-demo-floor-1-")
     assert loaded.point_to_world(world_to_pixel(2, 1)) == pytest.approx((2, 1), abs=1e-6)

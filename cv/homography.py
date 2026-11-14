@@ -94,7 +94,7 @@ def reprojection_errors(matrix: np.ndarray, image_points, world_points) -> np.nd
 
 def make_calibration_ref(matrix: np.ndarray, frame_id: str) -> str:
     digest = hashlib.sha256(np.round(matrix, 9).tobytes() + frame_id.encode()).hexdigest()[:10]
-    return f"perception-{frame_id}-{digest}"
+    return f"cv-{frame_id}-{digest}"
 
 
 @dataclass(frozen=True)

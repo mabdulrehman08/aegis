@@ -1,11 +1,11 @@
-"""AEGIS perception pipeline.
+"""AEGIS CV pipeline.
 
 Webcam (or video file) -> YOLO pose -> ByteTrack IDs -> floor homography ->
 CVObservation JSON to the backend at ``publisher.rate_hz``.
 
-    python -m perception.main                      # live camera, real backend
-    python -m perception.main --mock-backend       # print JSON instead of sending
-    python -m perception.main --source clip.mp4    # replay a recorded clip
+    python -m cv.main                      # live camera, real backend
+    python -m cv.main --mock-backend       # print JSON instead of sending
+    python -m cv.main --source clip.mp4    # replay a recorded clip
 
 Reports detections, tracking state and floor positions only. It never infers
 injuries, severity or triage.
@@ -22,19 +22,19 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Sequence
 
-from perception.camera import Camera
-from perception.clock import Timebase, session_id
-from perception.homography import Calibration, CalibrationError
-from perception.publisher import HttpTransport, MockTransport, Publisher
-from perception.settings import DEFAULT_CONFIG, PERCEPTION_DIR, load_settings, resolve
-from perception.tracker import TrackManager
+from cv.camera import Camera
+from cv.clock import Timebase, session_id
+from cv.homography import Calibration, CalibrationError
+from cv.publisher import HttpTransport, MockTransport, Publisher
+from cv.settings import DEFAULT_CONFIG, CV_DIR, load_settings, resolve
+from cv.tracker import TrackManager
 
-log = logging.getLogger("perception")
-WINDOW = "AEGIS perception (q / Esc to quit)"
+log = logging.getLogger("cv")
+WINDOW = "AEGIS CV (q / Esc to quit)"
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="AEGIS perception pipeline")
+    parser = argparse.ArgumentParser(description="AEGIS CV pipeline")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="pipeline YAML")
     parser.add_argument("--camera", type=int, help="camera index (overrides config)")
     parser.add_argument("--source", help="video file to replay instead of the camera")
@@ -53,7 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
 def load_calibration(path: Path) -> Calibration | None:
     if not path.exists():
         log.warning("No calibration at %s: tracking runs, but nothing is published. "
-                    "Run: python -m perception.tools.calibrate", path)
+                    "Run: python -m cv.tools.calibrate", path)
         return None
     try:
         calibration = Calibration.load(path)
@@ -81,7 +81,7 @@ def run(args: argparse.Namespace) -> int:
                                         else resolve(settings.mapping.homography))
     calibration = None
 
-    from perception.detector import Detector  # heavy import (torch) after config errors
+    from cv.detector import Detector  # heavy import (torch) after config errors
 
     detector = Detector(settings.detector)
     detector.warmup(settings.camera.width, settings.camera.height)
@@ -91,7 +91,7 @@ def run(args: argparse.Namespace) -> int:
     publisher = None
     if base_calibration is not None:
         if args.mock_backend:
-            mock_path = resolve(settings.publisher.mock_log, PERCEPTION_DIR)
+            mock_path = resolve(settings.publisher.mock_log, CV_DIR)
             transport = MockTransport(mock_path, echo=not args.quiet_mock)
             log.info("MOCK backend: requests are logged to %s", mock_path)
         else:
@@ -184,7 +184,7 @@ def show(image, tracks, tracker, calibration, camera, publisher, fps, detector, 
          resolution_error) -> bool:
     import cv2
 
-    from perception.overlay import draw_calibration, draw_hud, draw_minimap, draw_tracks
+    from cv.overlay import draw_calibration, draw_hud, draw_minimap, draw_tracks
 
     canvas = image.copy()
     draw_calibration(canvas, calibration)

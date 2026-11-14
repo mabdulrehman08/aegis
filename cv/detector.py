@@ -9,7 +9,7 @@ from typing import Any
 
 import numpy as np
 
-from perception.settings import DetectorSettings, resolve, resolve_model
+from cv.settings import DetectorSettings, resolve, resolve_model
 
 log = logging.getLogger(__name__)
 PERSON_CLASS = 0

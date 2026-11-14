@@ -4,7 +4,7 @@ import csv
 
 import pytest
 
-from perception.tools.detection_test import CSV_FIELDS, RunStats, append_csv, build_parser, main
+from cv.tools.detection_test import CSV_FIELDS, RunStats, append_csv, build_parser, main
 
 
 def test_summary_counts_frames_meeting_expected():

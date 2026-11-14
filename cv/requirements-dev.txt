@@ -1,4 +1,4 @@
-# Optional: lets perception tests validate payloads against the backend's own
+# Optional: lets cv tests validate payloads against the backend's own
 # Pydantic models and run an in-process backend. Versions follow uv.lock.
 -r requirements.txt
 fastapi==0.162.7

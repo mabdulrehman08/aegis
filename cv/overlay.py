@@ -7,8 +7,8 @@ from typing import Sequence
 import cv2
 import numpy as np
 
-from perception.homography import Calibration
-from perception.tracker import Track
+from cv.homography import Calibration
+from cv.tracker import Track
 
 GREEN = (80, 200, 80)
 ORANGE = (0, 165, 255)

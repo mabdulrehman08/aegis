@@ -1,7 +1,7 @@
 """Perception payloads against the backend's own models and routes.
 
 Skipped unless the backend dependencies are installed
-(``pip install -r perception/requirements-dev.txt``).
+(``pip install -r cv/requirements-dev.txt``).
 """
 
 import pytest
@@ -14,10 +14,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 from backend.app.main import create_app  # noqa: E402
 from backend.app.models import CVObservation  # noqa: E402
 from backend.app.simulation.models import CameraObservation, CameraRegistration  # noqa: E402
-from perception.clock import Timebase  # noqa: E402
-from perception.publisher import Publisher  # noqa: E402
-from perception.settings import PublisherSettings  # noqa: E402
-from perception.tracker import TrackReport  # noqa: E402
+from cv.clock import Timebase  # noqa: E402
+from cv.publisher import Publisher  # noqa: E402
+from cv.settings import PublisherSettings  # noqa: E402
+from cv.tracker import TrackReport  # noqa: E402
 
 
 FIRST_SEEN: dict[str, float] = {}
@@ -31,7 +31,7 @@ def _fresh_tracks():
 def make_publisher(transport, endpoint="camera"):
     timebase = Timebase()
     publisher = Publisher(PublisherSettings(endpoint=endpoint, heartbeat_s=0.0),
-                          frame_id="demo-floor-1", calibration_ref="perception-demo-floor-1-test",
+                          frame_id="demo-floor-1", calibration_ref="cv-demo-floor-1-test",
                           session_id="s1", timebase=timebase, transport=transport)
     return publisher, timebase
 
@@ -104,7 +104,7 @@ def test_full_track_lifecycle_is_accepted_by_the_running_backend():
     tracks = {t["camera"]["local_track_id"]: t for t in state["tracks"]}
     assert tracks["s1-t1"]["latest_observation"]["track"]["state"] == "lost"
     assert tracks["s1-t1"]["latest_observation"]["position"]["x_m"] == 4.2
-    assert tracks["s1-t2"]["camera"]["calibration_ref"] == "perception-demo-floor-1-test"
+    assert tracks["s1-t2"]["camera"]["calibration_ref"] == "cv-demo-floor-1-test"
     assert tracks["s1-t2"]["camera"]["location_basis"] == "calibrated_world"
     assert all(t["casualty_id"] is None for t in state["tracks"])  # association is human-only
 

@@ -6,8 +6,8 @@ import math
 
 import numpy as np
 
-from perception.detector import Detection
-from perception.homography import build_calibration
+from cv.detector import Detection
+from cv.homography import build_calibration
 
 F, CX, CY = 900.0, 640.0, 360.0
 CAMERA_POSITION = np.array([1.5, -2.0, 2.5])   # meters; floor is z = 0

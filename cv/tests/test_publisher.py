@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 
-from perception.clock import Timebase
-from perception.publisher import MockTransport, Publisher, TransportError
-from perception.settings import PublisherSettings
-from perception.tracker import TrackReport
+from cv.clock import Timebase
+from cv.publisher import MockTransport, Publisher, TransportError
+from cv.settings import PublisherSettings
+from cv.tracker import TrackReport
 
 
 class FakeClock:
@@ -39,7 +39,7 @@ def make(endpoint="camera", heartbeat_s=1.0):
     timebase = Timebase(monotonic=clock, wall=lambda: datetime(2026, 11, 14, 5, 0, tzinfo=timezone.utc))
     transport = FakeTransport()
     publisher = Publisher(PublisherSettings(endpoint=endpoint, heartbeat_s=heartbeat_s),
-                          frame_id="demo-floor-1", calibration_ref="perception-demo-floor-1-abc",
+                          frame_id="demo-floor-1", calibration_ref="cv-demo-floor-1-abc",
                           session_id="s1", timebase=timebase, transport=transport, clock=clock)
     return publisher, transport, clock
 
@@ -56,9 +56,9 @@ def test_registers_once_then_posts_a_camera_observation():
     publisher.step()
     (put, put_path, registration), (post, post_path, body) = transport.calls
     assert (put, put_path) == ("PUT", "/api/v1/simulations/demo/cameras/logitech-1")
-    assert registration == {"mode": "simulation", "actor": "perception-askar",
+    assert registration == {"mode": "simulation", "actor": "cv-askar",
                             "mapping_mode": "calibrated_world",
-                            "calibration_ref": "perception-demo-floor-1-abc"}
+                            "calibration_ref": "cv-demo-floor-1-abc"}
     assert (post, post_path) == ("POST", "/api/v1/simulations/demo/cameras/logitech-1/observations")
     assert body == {
         "mode": "simulation", "id": "s1-o000001", "observed_at": "2026-11-14T05:00:00.000Z",

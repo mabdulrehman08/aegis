@@ -1,5 +1,5 @@
-# AEGIS perception pipeline settings. Relative paths resolve against this
-# directory (perception/config/). Unknown keys are rejected.
+# AEGIS CV pipeline settings. Relative paths resolve against this
+# directory (cv/config/). Unknown keys are rejected.
 
 camera:
   index: 0                  # Logitech is not always 0 on macOS; try 1 or 2
@@ -17,7 +17,7 @@ detector:
   tracker: bytetrack.yaml
 
 mapping:
-  homography: homography.json   # written by perception.tools.calibrate
+  homography: homography.json   # written by cv.tools.calibrate
   frame_id: demo-floor-1        # default frame for calibration; must match the scenario
 
 tracking:
@@ -38,9 +38,9 @@ publisher:
   scenario_id: demo
   endpoint: camera          # camera = /cameras/{camera_id}/observations; legacy = /observations
   camera_id: logitech-1
-  actor: perception-askar
+  actor: cv-askar
   rate_hz: 5.0              # publish tick
   heartbeat_s: 1.0          # unchanged tracks are re-sent at this interval
   timeout_s: 1.5
   max_backoff_s: 5.0
-  mock_log: artifacts/mock_observations.jsonl   # relative to perception/
+  mock_log: artifacts/mock_observations.jsonl   # relative to cv/

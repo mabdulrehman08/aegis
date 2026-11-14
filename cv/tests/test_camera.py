@@ -1,7 +1,7 @@
 import numpy as np
 
-from perception.camera import Camera
-from perception.settings import CameraSettings
+from cv.camera import Camera
+from cv.settings import CameraSettings
 
 
 class FakeCapture:

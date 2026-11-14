@@ -1,4 +1,4 @@
-"""Typed pipeline settings, loaded from ``perception/config/pipeline.yaml``.
+"""Typed pipeline settings, loaded from ``cv/config/pipeline.yaml``.
 
 Unknown keys are rejected so a typo cannot silently fall back to a default.
 """
@@ -9,9 +9,9 @@ from dataclasses import dataclass, field, fields, is_dataclass, replace
 from pathlib import Path
 from typing import Any
 
-PERCEPTION_DIR = Path(__file__).resolve().parent
-CONFIG_DIR = PERCEPTION_DIR / "config"
-MODELS_DIR = PERCEPTION_DIR / "models"
+CV_DIR = Path(__file__).resolve().parent
+CONFIG_DIR = CV_DIR / "config"
+MODELS_DIR = CV_DIR / "models"
 DEFAULT_CONFIG = CONFIG_DIR / "pipeline.yaml"
 
 
@@ -61,7 +61,7 @@ class PublisherSettings:
     scenario_id: str = "demo"
     endpoint: str = "camera"
     camera_id: str = "logitech-1"
-    actor: str = "perception-askar"
+    actor: str = "cv-askar"
     rate_hz: float = 5.0
     heartbeat_s: float = 1.0
     timeout_s: float = 1.5
@@ -116,7 +116,7 @@ def resolve(path: str | Path, base: Path = CONFIG_DIR) -> Path:
 
 
 def resolve_model(name: str) -> str:
-    """Bare model names live in perception/models/ (downloaded on first use)."""
+    """Bare model names live in cv/models/ (downloaded on first use)."""
     candidate = Path(name)
     if candidate.exists() or candidate.parent != Path("."):
         return name
