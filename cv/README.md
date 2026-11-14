@@ -367,7 +367,7 @@ Nothing here changes a shared file.
 - **Module location:** the code lives in `cv/`, matching the repository
   layout, and runs as its own process that only talks HTTP to the backend.
   Its tests run separately (`python -m pytest cv/tests`) because the root
-  `pyproject.toml` test paths cover only `backend/` and `optimization/`, and
+  `pyproject.toml` test paths cover `backend/`, `optimization/` and `hardware/`, and
   the CV dependencies (torch, OpenCV) are not in `uv.lock`.
 - **`--prepare-only` and `logitech-1`:** `scripts.live_demo --prepare-only`
   registers `logitech-1` with `calibration_ref: external-calibration-demo-001`.
