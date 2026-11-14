@@ -34,6 +34,25 @@ Repeated presses and repeated holds must produce exactly one `acknowledged`
 and one `completed` event, with `delivered <= acknowledged <= completed`.
 Pending: needs a person at the device.
 
+## Regression: unconfirmed ACK after retry exhaustion (review finding on `d411c98`)
+
+The first firmware cleared a pending `ACK` after 10 unanswered retries, after
+which a hold could send `DONE` and the backend could record `completed` without
+`acknowledged`. Fixed in firmware 0.2.0 and covered by `tests/test_ack_regression.py`:
+
+| Test | Asserts |
+| --- | --- |
+| ACK during a 5 s / 30 s / 120 s outage | stays pending throughout, is delivered after reconnect; backend events delivered 1, acknowledged 1 |
+| Hold while the ACK is unconfirmed | no `DONE` is sent; after reconnect the backend has `acknowledged` and no `completed`; a later hold completes, with delivered <= acknowledged <= completed |
+| Device sends `DONE` without `ACK` (protocol violation) | the bridge refuses to forward `completed` |
+| Bridge restarted between press and hold | the device keeps its acknowledged task; the hold completes it |
+| Firmware source guard | `retryPendingReport()` never clears a pending report, no retry cap exists, `onLongPress()` requires `ACKED` with no pending report, and only an `OK` for the exact pending kind and command clears it |
+
+The bridge-restart test exposed one more issue, also fixed: on reconnect the
+bridge used to `RESET` the device before asking the backend, which sent an
+already acknowledged task back to blinking. It now confirms with the backend
+first and only clears the device when no task should be shown.
+
 ## Why duplicates cannot occur
 
 - The device sends `ACK` only on the alerting → acknowledged transition and

@@ -70,6 +70,7 @@ class Bridge:
         self._last_rx = 0.0
         self._last_ping = 0.0
         self._waiting_logged = False
+        self._clear_pending = False
 
     # ------------------------------------------------------------ connection
 
@@ -115,9 +116,18 @@ class Bridge:
             # Same token keeps the device's progress; a different one replaces it.
             self._send(format_assign(self.active.token, self.active.label, self.active.urgency))
         else:
-            # Nothing should be shown: clear anything left from before the disconnect.
-            self._send("RESET")
+            # The device may still show a task from before (e.g. this bridge was
+            # restarted). Do not wipe it yet: the caller confirms with the backend
+            # first, then either re-shows it (keeping the responder's progress)
+            # or calls clear_stale().
+            self._clear_pending = True
         return True
+
+    def clear_stale(self) -> None:
+        """Clear whatever the device shows, once it is confirmed nothing should be shown."""
+        if self._clear_pending and self.connected and self.active is None:
+            self._send("RESET")
+        self._clear_pending = False
 
     def _drop_transport(self) -> None:
         if self._transport is not None:
@@ -139,6 +149,7 @@ class Bridge:
             raise RuntimeError(f"device busy with {self.active.token}; cancel it first")
         line = format_assign(token, label, urgency)  # validates before changing state
         self.active = ActiveAssignment(token, label, urgency, self.clock(), dict(context or {}))
+        self._clear_pending = False  # ASSIGN replaces whatever the device showed
         if self.connected:
             self._send(line)
 

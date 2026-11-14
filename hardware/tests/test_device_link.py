@@ -97,7 +97,9 @@ def test_reconnect_reshows_assignment_or_clears_stale_display(rig):
     bridge.cancel()  # cleared while unplugged
     transport.connected = True
     assert bridge.connect()
-    assert device.state == "IDLE"  # RESET on reconnect
+    assert device.display == "B"  # not wiped until the caller confirms nothing should show
+    bridge.clear_stale()
+    assert device.state == "IDLE"  # RESET once confirmed
 
 
 def test_assign_while_disconnected_is_shown_on_connect():

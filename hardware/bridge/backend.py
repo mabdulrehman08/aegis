@@ -115,6 +115,7 @@ class BackendSync:
         self.stats = SyncStats()
         self._next_poll = 0.0
         self._consecutive_failures = 0
+        self._acknowledged: set[tuple[Any, str]] = set()  # (epoch, assignment) with an ACK queued/posted
         bridge.on_report = self._on_report
 
     # ------------------------------------------------------------ main loop
@@ -163,6 +164,7 @@ class BackendSync:
             if self.target is not None:
                 log.info("assignment %s no longer active in backend: clearing device", self.target["id"])
                 self._clear_device()
+            self.bridge.clear_stale()  # backend confirms nothing should be shown
             return
 
         if self.target is not None and self.target["id"] == wanted["id"]:
@@ -190,6 +192,14 @@ class BackendSync:
         if MILESTONE_RANK.get(target.get("status", "dispatched"), 0) >= MILESTONE_RANK[kind]:
             log.info("%s already recorded by backend for %s; not resending", kind, target["id"])
             return
+        if kind == "completed" and not self._acknowledged_known(target):
+            # The firmware never sends DONE before its ACK is confirmed; if a device
+            # ever did, never let completion skip the human acknowledgement.
+            self.stats.rejected.append(f"completed: blocked, {target['id']} has no acknowledgement")
+            log.error("blocked completed for %s: no acknowledgement recorded or queued", target["id"])
+            return
+        if kind == "acknowledged":
+            self._acknowledged.add((self.epoch, target["id"]))
         event = build_device_event(
             kind=kind, assignment=target, scenario_id=self.scenario_id, epoch=self.epoch or 0,
             physical_device_id=self.bridge.device_id or "unknown-device", occurred_at=occurred_at,
@@ -233,6 +243,10 @@ class BackendSync:
                 self.on_event(event, f"rejected {status}")
 
     # ------------------------------------------------------------ helpers
+
+    def _acknowledged_known(self, target: dict[str, Any]) -> bool:
+        return (MILESTONE_RANK.get(target.get("status", "dispatched"), 0) >= MILESTONE_RANK["acknowledged"]
+                or (self.epoch, target["id"]) in self._acknowledged)
 
     def _clear_device(self) -> None:
         self.target = None

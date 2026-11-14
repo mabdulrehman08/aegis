@@ -93,6 +93,8 @@ def main() -> int:
                 last_attempt = time.monotonic()
                 if bridge.connect():
                     print(f"device connected: {bridge.device_id} fw={bridge.firmware} link={bridge.link}")
+                    if args.offline:
+                        bridge.clear_stale()  # no backend to ask: start from a clean device
             bridge.poll()
             if sync:
                 sync.tick()
