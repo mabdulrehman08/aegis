@@ -20,6 +20,7 @@ npm run dev            # http://localhost:3000
 
 # with both running
 npm run smoke          # end-to-end API check through the dev proxy
+npm run e2e            # browser click-through (uses your installed Google Chrome)
 npm run typecheck && npm run lint && npm run build
 ```
 
@@ -33,37 +34,62 @@ Config (all optional):
 
 ## What's on screen
 
-The operator at the command center watches three panes and relays guidance to firefighters.
+The operator at the command center watches the scene and relays guidance to firefighters.
 
-| Pane | Shows | Operator actions |
+```
+┌ AEGIS · loop chips (detect → … → adapt) · SIMULATION · 🔔 · ☰ Setup · live · operator · Reset ┐
+├──────────────────────────────────────────────┬──────────────────────────────┤
+│ SCENE MAP (~68% × ~70%)                      │ BODYCAM GRID (2×2)           │
+│ victims, firefighters, routes, CV detections │ Alpha · Bravo · Building · + │
+│ Mark <firefighter> · Block route             │ COMMS → selected firefighter │
+├──────────────────────────────────────────────┼──────────────────────────────┤
+│ VICTIM STRIP: summary + one card per victim  │ COMMAND DOCK: recommendation,│
+│ (click a card → editor)                      │ replan diff, approve/dispatch│
+└──────────────────────────────────────────────┴──────────────────────────────┘
+```
+
+| Area | Shows | Operator actions |
 | --- | --- | --- |
-| **1 · Scene map** | Victims (priority colour, UNASSESSED = dashed "?"), firefighters, occupancy grid/walls, proposed vs dispatched A* routes, CV detections | **Block route** toggles cells → `PUT /map` (new revision, auto-replan); select victims/firefighters |
-| **2 · Building surveillance** | Building camera feed; victim summary (count, priorities, bleeding reported, pulses logged); per-victim card with pulse, bleeding, visible wound, breathing, CV confidence/staleness, task status | Set human priority → `POST /casualties/{id}/assessment`; log what is seen/reported (pulse bpm, bleeding, wound, breathing); confirm or link unconfirmed detections → `POST /associations` |
-| **3 · Firefighter cam** | Selected firefighter's bodycam feed with target overlay; turn-by-turn directions generated from the planned A* route; comms log | Hold-to-talk (button or Space) routes the operator mic to the firefighter's speaker; spoken quick commands and typed messages; availability → `PATCH /responders/{id}`; **mark position** then click the map → `PATCH /responders/{id}` with position |
-| Command bar | Current recommendation, approval countdown, active task acknowledgements | Approve exact revision → `POST /decision`; then separate **Dispatch** → `POST /dispatches`; ↻ replan |
-| Details drawer | Full recommendation + grounded explanation, task progress (rehearsal SIMULATE controls), incident timeline | — |
+| Scene map | Victims (priority colour; UNASSESSED = dashed "?"), firefighters, walls/grid, proposed vs dispatched A* routes, previous plan (dotted) after a replan, CV detections, optional floor-plan image | **Block route** (B) toggles cells → `PUT /map`; **Mark** (M) then click → `PATCH /responders/{id}` position |
+| Bodycam grid | One tile per firefighter + building camera + spare; target and task status overlay | Click a tile (or 1–9) to select that firefighter; per-tile source; 🔇/🔊 to hear the firefighter |
+| Comms | Selected firefighter's availability, voice link, quick commands, turn-by-turn directions from the A* route, comms log | Hold to talk (button or Space); spoken commands/messages; availability → `PATCH /responders/{id}` |
+| Victim strip | Totals (priorities, unassessed, blood seen, pulse known); per victim: human priority, pulse, operator observations, top camera signs, task | Card → editor: priority → `POST /assessment`; bleeding/wound/breathing/notes/reported pulse; full camera signs with confidence + age. Unconfirmed detections → **Confirm new victim** / **Link** (`POST /associations`) |
+| Command dock | Recommendation, expiry, **what changed since the previous revision**, tasks with ack source (**via device** vs **simulated**), device status | Approve exact revision (A) → `POST /decision`; separate **Dispatch** (D) → `POST /dispatches`; ↻ replan; details › |
+| Details drawer (L) | Full recommendation + grounded explanation, task progress with SIMULATE rehearsal controls, incident timeline | — |
+| Alerts | New camera detection, new victim, acknowledgement, responder offline, approval invalidated/expiring, camera lost sight of a victim | Sound (🔔 to mute) + flash on the related card/tile/map marker |
+| ☰ Setup | Preview data toggles, fallback mode, floor-plan upload/opacity, incident summary export, shortcuts | — |
+
+### Evidence sources on a victim card (never mixed up)
+
+| Label | Source | Can change priority? |
+| --- | --- | --- |
+| Priority badge | Human (`source: human`) via the editor | — it *is* the priority |
+| `cam: …` lines | Backend camera signs (`aegis-cv-signs/0.1`), literal wording, confidence, age, STALE | No |
+| bleed / wound / breath chips, notes, "reported" pulse | Operator observations (browser storage until backend request #4) | No |
+| `♥ … PREVIEW` | Mock sensor (Setup → preview) until backend request #3 | No |
 
 ### Video and audio
 
-- Each feed's **Connect feed** offers any camera attached to this computer (Logitech webcam;
-  an iPhone via macOS Continuity Camera works as a stand-in bodycam) or a stream URL
-  (MJPEG renders as an image, MP4/WebM as video). The choice is remembered per feed.
-  Nothing is recorded or sent anywhere; the backend has no video API.
-- **Voice link**: the operator's mic plays out of a chosen audio output (Chrome supports
-  per-device output) — e.g. a Bluetooth speaker clipped to the firefighter and paired to
-  this computer. The mic is muted unless the talk button/Space is held.
-- Quick commands and route directions use the browser's speech synthesis, which plays on
-  the **system default output** — set the firefighter's speaker as the system output for the demo.
-- Directions are map-relative (north = up) because firefighter heading isn't tracked;
-  "mark position" updates the backend position the router plans from.
+- Each tile's **Connect** offers any camera attached to this computer (Logitech webcam; an iPhone
+  via macOS Continuity Camera works as a stand-in bodycam) or a stream URL (MJPEG as image,
+  MP4/WebM as video). For bodycams, "hear via" picks an audio input so command can listen.
+- **Voice link**: the operator's mic plays out of a chosen output (e.g. a Bluetooth speaker on the
+  firefighter, paired to this computer). Muted unless the talk button/Space is held.
+- Quick commands and directions use speech synthesis on the **system default output**.
+- Directions are map-relative (north = up); responder heading isn't tracked.
 
-### Vitals and visible injuries (provisional)
+### Preview data and fallback
 
-There is no vitals/injury schema in `shared/CONTRACT.md`, and the CV pipeline must not infer
-injuries. Pulse, bleeding, wound and breathing entries are therefore **operator observations**
-(seen on a feed or reported by the firefighter), stored in this browser per simulation epoch
-(`src/lib/fieldNotes.ts`). They never change priority automatically. Replace the hook with API
-calls once the backend adds a schema.
+- Features the backend doesn't support yet are listed in [`BACKEND_REQUESTS.md`](./BACKEND_REQUESTS.md).
+  Their mock data is **off by default**; when on, a banner and per-value `PREVIEW` tags are shown.
+- **Fallback** (Setup, or the offline screen) shows the seeded `shared/mock` scenario read-only
+  with a banner and all actions disabled. For recorded footage, put a video in `frontend/public/`
+  and use its URL as a tile source.
+
+### Keyboard shortcuts
+
+`A` approve · `D` dispatch · `1–9` select firefighter · hold `Space` talk · `B` block route ·
+`M` mark position · `L` timeline · `?` help · `Esc` cancel. Ignored while typing.
 
 ## Sync model
 
@@ -96,9 +122,14 @@ calls once the backend adds a schema.
 
 ```
 src/app/            layout, page, globals.css (design tokens)
-src/components/     CommandCenter (layout), SceneMap, SurveillancePane, FighterPane,
-                    VideoFeed, CommandBar, ProposalPanel, TasksPanel, Timeline, LoopStrip, ui
+src/components/     CommandCenter (layout + shortcuts), SceneMap, CamGrid, VideoFeed, CommsPanel,
+                    VictimStrip, CommandDock, Overlays (alerts, setup, help), ProposalPanel,
+                    TasksPanel, Timeline, LoopStrip, ui
 src/lib/            types.ts (contract mirror), api.ts, useSimulation.ts, format.ts,
-                    navigation.ts (route → directions), fieldNotes.ts (operator observations)
-scripts/smoke.mjs   end-to-end check via the proxy
+                    insights.ts (camera-sign wording, ack source, replan diff), useAlerts.ts,
+                    navigation.ts (route → directions), fieldNotes.ts, preview.ts (mock adapters),
+                    fallback.ts (+ fallbackScenario.json copy of shared/mock), report.ts (export)
+scripts/smoke.mjs   API check via the proxy
+scripts/e2e.mjs     browser click-through (puppeteer-core + system Chrome)
+BACKEND_REQUESTS.md proposed endpoints for features currently on preview data
 ```
