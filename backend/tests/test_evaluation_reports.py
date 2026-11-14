@@ -22,3 +22,12 @@ def test_corrupt_and_oversized_evaluations_do_not_break_dashboard(tmp_path):
     (tmp_path / "uncertainty.json").write_text("[]")
     (tmp_path / "scenario_comparison.json").write_text(" " * 2_000_001)
     assert all(not item.available for item in evaluation_index(tmp_path).artifacts)
+
+
+def test_nonfinite_or_excessively_nested_artifacts_are_unavailable(tmp_path):
+    (tmp_path / "benchmark.json").write_text('{"metric": NaN}')
+    (tmp_path / "uncertainty.json").write_text('{"metric": Infinity}')
+    (tmp_path / "scenario_comparison.json").write_text('[' * 2000 + '0' + ']' * 2000)
+    result = evaluation_index(tmp_path)
+    assert all(not item.available for item in result.artifacts)
+    assert "NaN" not in result.model_dump_json()

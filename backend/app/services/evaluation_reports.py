@@ -3,7 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NoReturn
 
 from pydantic import BaseModel, ConfigDict
 
@@ -14,6 +14,10 @@ REPORT_FILES = {
     "counterfactuals": "scenario_comparison.json",
 }
 REPORT_ROOT = Path(__file__).resolve().parents[3] / "reports"
+
+
+def _reject_nonfinite(value: str) -> NoReturn:
+    raise ValueError(f"Non-finite JSON value is not a measurement: {value}")
 
 
 class EvaluationArtifact(BaseModel):
@@ -47,10 +51,10 @@ def evaluation_index(root: Path = REPORT_ROOT) -> EvaluationIndex:
                 encoded = source.read(2_000_001)
             if len(encoded) > 2_000_000:
                 raise ValueError("Report exceeds bounded artifact size")
-            report = json.loads(encoded)
+            report = json.loads(encoded, parse_constant=_reject_nonfinite)
             if not isinstance(report, dict):
                 raise ValueError("Report must be a JSON object")
-        except (OSError, ValueError):
+        except (OSError, ValueError, RecursionError):
             artifacts.append(EvaluationArtifact(
                 name=name, available=False,
                 unavailable_reason="No valid committed report is available; no result is inferred.",
