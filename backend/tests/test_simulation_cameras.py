@@ -81,6 +81,49 @@ def test_namespacing_is_collision_free(client, clock):
     assert len(state(client)["tracks"]) == 2
 
 
+def same_position_zones():
+    return {**ZONES, "zones": {"a": position(10, 16), "b": position(10, 16)}}
+
+
+def test_zone_change_at_same_point_invalidates_proposal_provenance(client, clock):
+    register(client, "phone", same_position_zones())
+    first_seen = clock.iso()
+    received = post(client, "phone", report(clock, zone_id="a")).json()
+    linked = client.post(f"{BASE}/associations", json={
+        "track_id": received["result"]["track_id"], "casualty_id": "casualty-001",
+        "actor": "operator-1"}).json()["state"]
+    old_proposal = linked["current_proposal_id"]
+    clock.advance(1)
+    changed = post(client, "phone", report(clock, obs_id="o2", first_seen=first_seen,
+                                          zone_id="b"))
+    assert changed.status_code == 201
+    snapshot = changed.json()["state"]
+    assert snapshot["scene_revision"] > linked["scene_revision"]
+    assert snapshot["current_proposal_id"] != old_proposal
+    proposal = next(item for item in snapshot["proposals"]
+                    if item["id"] == snapshot["current_proposal_id"])
+    assert proposal["location_provenance"]["casualty-001"]["zone_id"] == "b"
+
+
+def test_same_observation_id_cannot_relabel_zone_at_same_point(client, clock):
+    register(client, "phone", same_position_zones())
+    assert post(client, "phone", report(clock, zone_id="a")).status_code == 201
+    assert post(client, "phone", report(clock, zone_id="b")).status_code == 409
+    assert state(client)["tracks"][0]["camera"]["zone_id"] == "a"
+
+
+@pytest.mark.parametrize("visibility", ["lost", "occluded"])
+def test_lost_same_point_zone_change_cannot_replace_detection_provenance(client, clock, visibility):
+    register(client, "phone", same_position_zones())
+    first_seen = clock.iso()
+    assert post(client, "phone", report(clock, zone_id="a")).status_code == 201
+    clock.advance(1)
+    changed = report(clock, obs_id="o2", state_name=visibility, first_seen=first_seen,
+                     last_seen=first_seen, zone_id="b")
+    assert post(client, "phone", changed).status_code == 409
+    assert state(client)["tracks"][0]["camera"]["zone_id"] == "a"
+
+
 def test_explicit_association_required_and_no_cross_camera_reid(client, clock):
     register(client, "cam-a", CALIBRATED)
     register(client, "cam-b", CALIBRATED)

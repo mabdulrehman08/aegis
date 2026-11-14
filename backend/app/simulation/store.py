@@ -797,7 +797,7 @@ class SimulationStore:
 
     def _apply_observation(self, session: _Session, observation: CVObservation, now: datetime,
                            provenance: CameraProvenance | None):
-        fingerprint = _fingerprint(_dump(observation))
+        fingerprint = _fingerprint(_dump(observation), _dump(provenance) if provenance else None)
         known = session.observation_fingerprints.get(observation.id)
         payload = {"observation_id": observation.id,
                    "camera": _dump(provenance) if provenance else None}
@@ -815,6 +815,11 @@ class SimulationStore:
             record = session.tracks.get(track.track_id)
             if record is not None:
                 previous = record.latest
+                previous_mapping = (record.camera.model_dump(exclude={"local_observation_id"})
+                                    if record.camera else None)
+                current_mapping = (provenance.model_dump(exclude={"local_observation_id"})
+                                   if provenance else None)
+                mapping_changed = previous_mapping != current_mapping
                 assert previous.track is not None
                 if observation.observed_at < previous.observed_at:
                     raise _conflict("Stale observation: older than the track's latest update")
@@ -825,7 +830,8 @@ class SimulationStore:
                 if track.state != "visible" and (
                         observation.position != previous.position
                         or observation.confidence != previous.confidence
-                        or track.last_seen_at != previous.track.last_seen_at):
+                        or track.last_seen_at != previous.track.last_seen_at
+                        or mapping_changed):
                     raise _conflict(f"A {track.state} report must retain the last actual "
                                     "detection's position, confidence and last_seen_at")
                 record.latest = observation.model_copy(deep=True)
@@ -838,6 +844,7 @@ class SimulationStore:
                         or previous.track.state != track.state
                         or (previous.confidence >= self.min_confidence)
                         != (observation.confidence >= self.min_confidence)
+                        or mapping_changed
                     )
                     self._set_casualty_position(session, casualty_id, observation.position)
                     if impactful:
