@@ -42,6 +42,27 @@ export interface CVTrack {
   last_seen_at: ISODate;
 }
 
+/** aegis-cv-signs/0.1 — advisory camera measurements, never clinical findings. */
+export interface CameraSign<V extends string> {
+  value: V;
+  confidence: number;
+  reason?: string | null;
+}
+export type BodyRegion = "head" | "torso" | "left_arm" | "right_arm" | "left_leg" | "right_leg";
+export interface CameraSigns {
+  schema: "aegis-cv-signs/0.1";
+  window_s: number;
+  posture: CameraSign<"standing" | "sitting" | "lying" | "unknown">;
+  movement: CameraSign<"moving" | "still" | "not_testable"> & { still_for_s?: number | null };
+  response: CameraSign<"responded" | "no_response" | "not_tested"> & { command_at?: ISODate | null };
+  eyes?: CameraSign<"open" | "closed" | "not_testable"> | null;
+  breathing?: (CameraSign<"motion_detected" | "no_motion_detected" | "not_testable"> & { rate_bpm?: number | null }) | null;
+  visible_blood?:
+    | (CameraSign<"detected" | "not_detected" | "not_testable"> & { regions?: BodyRegion[] | null; method?: "color" | "model" | null })
+    | null;
+  camera_motion?: { value: "still" | "steady" | "moving" | "unknown"; speed_px_s?: number | null } | null;
+}
+
 export interface CVObservation {
   id: string;
   source: "cv";
@@ -50,6 +71,7 @@ export interface CVObservation {
   kind: "person_detected";
   confidence: number;
   track?: CVTrack | null;
+  signs?: CameraSigns | null;
 }
 
 export interface Obstacle {
@@ -133,6 +155,8 @@ export interface TrackRecord {
   track_id: string;
   casualty_id: string | null;
   latest_observation: CVObservation;
+  latest_visible_signs?: CameraSigns | null;
+  signs_observed_at?: ISODate | null;
   observation_count: number;
   camera?: CameraProvenance | null;
 }

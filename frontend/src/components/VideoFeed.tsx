@@ -3,18 +3,24 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
- * A live feed from either a camera attached to this computer (e.g. the Logitech
- * webcam, or an iPhone via macOS Continuity Camera standing in for a body cam)
- * or a stream URL (e.g. an MJPEG stream published by the perception service).
- * Nothing is recorded or uploaded; the backend has no video API.
+ * A live feed from a camera attached to this computer (Logitech webcam, or an
+ * iPhone via macOS Continuity Camera as a stand-in bodycam) or a stream URL
+ * (MJPEG renders as <img>, MP4/WebM as <video>). Optional audio input lets
+ * command hear the responder. Nothing is recorded or uploaded.
  */
-type Source = { kind: "off" } | { kind: "device"; deviceId: string } | { kind: "url"; url: string; as: "img" | "video" };
+type Source =
+  | { kind: "off" }
+  | { kind: "device"; deviceId: string; audioId?: string | null }
+  | { kind: "url"; url: string; as: "img" | "video" };
 
 interface Props {
-  feedId: string; // persistence key, e.g. "surveillance" or "bodycam:responder-001"
+  feedId: string;
   title: string;
   overlay?: ReactNode;
   className?: string;
+  compact?: boolean;
+  /** Offer an audio input so command can hear the responder. */
+  audio?: boolean;
 }
 
 function load(feedId: string): Source {
@@ -27,19 +33,18 @@ function load(feedId: string): Source {
   return { kind: "off" };
 }
 
-export function VideoFeed({ feedId, title, overlay, className = "" }: Props) {
+export function VideoFeed({ feedId, title, overlay, className = "", compact = false, audio = false }: Props) {
   const [source, setSource] = useState<Source>({ kind: "off" });
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoIn, setVideoIn] = useState<MediaDeviceInfo[]>([]);
+  const [audioIn, setAudioIn] = useState<MediaDeviceInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [setup, setSetup] = useState(false);
   const [urlDraft, setUrlDraft] = useState("");
+  const [muted, setMuted] = useState(true);
   const [time, setTime] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    setSource(load(feedId));
-  }, [feedId]);
-
+  useEffect(() => setSource(load(feedId)), [feedId]);
   useEffect(() => {
     const t = setInterval(() => setTime(new Date().toLocaleTimeString([], { hour12: false })), 1000);
     return () => clearInterval(t);
@@ -57,30 +62,32 @@ export function VideoFeed({ feedId, title, overlay, className = "" }: Props) {
 
   const refreshDevices = useCallback(async () => {
     try {
-      // Labels are only exposed after permission has been granted once.
-      const probe = await navigator.mediaDevices.getUserMedia({ video: true });
+      const probe = await navigator.mediaDevices.getUserMedia({ video: true, audio: audio });
       probe.getTracks().forEach((t) => t.stop());
       const all = await navigator.mediaDevices.enumerateDevices();
-      setDevices(all.filter((d) => d.kind === "videoinput"));
+      setVideoIn(all.filter((d) => d.kind === "videoinput"));
+      setAudioIn(all.filter((d) => d.kind === "audioinput"));
       setError(null);
     } catch (e) {
-      setError(`Camera permission: ${(e as Error).message}`);
+      setError(`Permission: ${(e as Error).message}`);
     }
-  }, []);
+  }, [audio]);
 
-  // Attach the selected local camera.
   useEffect(() => {
     if (source.kind !== "device") return;
     let stream: MediaStream | null = null;
     let cancelled = false;
     navigator.mediaDevices
-      .getUserMedia({ video: { deviceId: { exact: source.deviceId }, width: { ideal: 1280 } }, audio: false })
+      .getUserMedia({
+        video: { deviceId: { exact: source.deviceId }, width: { ideal: 1280 } },
+        audio: source.audioId ? { deviceId: { exact: source.audioId }, echoCancellation: true } : false,
+      })
       .then((s) => {
         if (cancelled) return s.getTracks().forEach((t) => t.stop());
         stream = s;
         if (videoRef.current) videoRef.current.srcObject = s;
       })
-      .catch((e) => setError(`Cannot open camera: ${(e as Error).message}`));
+      .catch((e) => setError(`Cannot open: ${(e as Error).message}`));
     return () => {
       cancelled = true;
       stream?.getTracks().forEach((t) => t.stop());
@@ -88,87 +95,118 @@ export function VideoFeed({ feedId, title, overlay, className = "" }: Props) {
   }, [source]);
 
   const live = source.kind !== "off" && !error;
-  const deviceLabel =
-    source.kind === "device" ? devices.find((d) => d.deviceId === source.deviceId)?.label ?? "local camera" : null;
+  const hasAudio = (source.kind === "device" && !!source.audioId) || (source.kind === "url" && source.as === "video");
+  const openSetup = () => {
+    setSetup(true);
+    void refreshDevices();
+  };
 
   return (
-    <div className={`relative overflow-hidden rounded border border-line bg-black ${className}`}>
-      {source.kind === "device" && <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />}
+    <div className={`group relative overflow-hidden rounded border border-line bg-black ${className}`}>
+      {source.kind === "device" && <video ref={videoRef} autoPlay playsInline muted={muted} className="h-full w-full object-cover" />}
       {source.kind === "url" &&
         (source.as === "img" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={source.url} alt={title} className="h-full w-full object-cover" onError={() => setError("Stream not reachable")} />
         ) : (
-          <video src={source.url} autoPlay playsInline muted loop className="h-full w-full object-cover" onError={() => setError("Stream not playable")} />
+          <video src={source.url} autoPlay playsInline muted={muted} loop className="h-full w-full object-cover" onError={() => setError("Stream not playable")} />
         ))}
 
       {!live && !setup && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(0deg,#0a0f14_0_2px,#070b0f_2px_4px)]">
-          <span className="mono text-[11px] tracking-[0.2em] text-faint">{error ? "SIGNAL ERROR" : "NO SIGNAL"}</span>
-          {error && <span className="max-w-[80%] text-center text-[11px] text-danger">{error}</span>}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-[repeating-linear-gradient(0deg,#0a0f14_0_2px,#070b0f_2px_4px)]">
+          <span className="mono text-[10px] tracking-[0.2em] text-faint">{error ? "SIGNAL ERROR" : "NO SIGNAL"}</span>
+          {error && !compact && <span className="max-w-[85%] text-center text-[10.5px] text-danger">{error}</span>}
           <button
-            onClick={() => {
-              setSetup(true);
-              void refreshDevices();
+            onClick={(e) => {
+              e.stopPropagation();
+              openSetup();
             }}
-            className="rounded border border-line-strong px-2.5 py-1 text-[11px] text-text hover:border-accent"
+            className="rounded border border-line-strong px-2 py-0.5 text-[10.5px] text-text hover:border-accent"
           >
-            Connect feed
+            Connect
           </button>
         </div>
       )}
 
-      {/* HUD */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent px-2 py-1.5">
-        {live && <span className="blink h-2 w-2 rounded-full bg-danger" />}
-        <span className="mono text-[10.5px] font-semibold tracking-wider text-white/90">{title}</span>
-        {deviceLabel && <span className="mono truncate text-[10px] text-white/50">{deviceLabel}</span>}
-        <span className="mono ml-auto text-[10px] text-white/60">{time}</span>
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 bg-gradient-to-b from-black/75 to-transparent px-1.5 py-1">
+        {live && <span className="blink h-1.5 w-1.5 rounded-full bg-danger" />}
+        <span className={`mono truncate font-semibold tracking-wider text-white/90 ${compact ? "text-[9.5px]" : "text-[10.5px]"}`}>{title}</span>
+        {!compact && <span className="mono ml-auto text-[10px] text-white/60">{time}</span>}
       </div>
       {live && overlay && <div className="pointer-events-none absolute inset-x-0 bottom-0">{overlay}</div>}
+
       {live && (
-        <button
-          onClick={() => {
-            setSetup(true);
-            void refreshDevices();
-          }}
-          className="mono absolute right-1.5 top-7 rounded bg-black/60 px-1.5 py-0.5 text-[9.5px] text-white/60 transition hover:text-white"
-        >
-          source
-        </button>
+        <div className="absolute right-1 top-5 flex gap-1 opacity-70 transition group-hover:opacity-100">
+          {hasAudio && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMuted((m) => !m);
+              }}
+              className={`mono rounded px-1 py-px text-[9.5px] ${muted ? "bg-black/60 text-white/70" : "bg-accent text-[#04181a]"}`}
+              title={muted ? "Listen to this feed" : "Mute this feed"}
+            >
+              {muted ? "🔇 listen" : "🔊 on"}
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openSetup();
+            }}
+            className="mono rounded bg-black/60 px-1 py-px text-[9.5px] text-white/70 hover:text-white"
+          >
+            src
+          </button>
+        </div>
       )}
 
       {setup && (
-        <div className="absolute inset-0 z-10 flex flex-col gap-2 overflow-y-auto bg-[#05080bf2] p-3 text-[11px]">
+        <div className="absolute inset-0 z-10 flex flex-col gap-1.5 overflow-y-auto bg-[#05080bf5] p-2 text-[10.5px]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between">
-            <span className="label !text-text">{title} · source</span>
-            <button onClick={() => setSetup(false)} className="text-muted hover:text-text">
+            <span className="label !text-[9.5px] !text-text">{title}</span>
+            <button onClick={() => setSetup(false)} className="text-muted hover:text-text" aria-label="Close">
               ✕
             </button>
           </div>
-          <p className="label !text-[9.5px]">Camera on this computer</p>
-          {devices.length === 0 && <p className="text-muted">{error ?? "Requesting camera list…"}</p>}
-          {devices.map((d) => (
+          {videoIn.length === 0 && <p className="text-muted">{error ?? "Requesting devices…"}</p>}
+          {videoIn.map((d) => (
             <button
               key={d.deviceId}
               onClick={() => {
-                choose({ kind: "device", deviceId: d.deviceId });
+                choose({ kind: "device", deviceId: d.deviceId, audioId: source.kind === "device" ? source.audioId ?? null : null });
                 setSetup(false);
               }}
-              className={`truncate rounded border px-2 py-1 text-left hover:border-accent ${
+              className={`truncate rounded border px-1.5 py-0.5 text-left hover:border-accent ${
                 source.kind === "device" && source.deviceId === d.deviceId ? "border-accent text-accent" : "border-line-strong"
               }`}
             >
-              {d.label || "Camera"}
+              📷 {d.label || "Camera"}
             </button>
           ))}
-          <p className="label mt-1 !text-[9.5px]">Stream URL (MJPEG / MP4)</p>
+          {audio && source.kind === "device" && audioIn.length > 0 && (
+            <label className="flex items-center gap-1">
+              <span className="text-muted">hear via</span>
+              <select
+                value={source.audioId ?? ""}
+                onChange={(e) => choose({ ...source, audioId: e.target.value || null })}
+                className="mono min-w-0 flex-1 rounded border border-line-strong bg-bg px-1 py-0.5"
+              >
+                <option value="">no audio</option>
+                {audioIn.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.label || "microphone"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <form
             className="flex gap-1"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!urlDraft.trim()) return;
               const u = urlDraft.trim();
+              if (!u) return;
               choose({ kind: "url", url: u, as: /\.(mp4|webm|mov)(\?|$)/i.test(u) ? "video" : "img" });
               setSetup(false);
             }}
@@ -176,10 +214,10 @@ export function VideoFeed({ feedId, title, overlay, className = "" }: Props) {
             <input
               value={urlDraft}
               onChange={(e) => setUrlDraft(e.target.value)}
-              placeholder="http://127.0.0.1:5000/stream.mjpg"
-              className="mono min-w-0 flex-1 rounded border border-line-strong bg-bg px-2 py-1 outline-none focus:border-accent"
+              placeholder="stream URL (.mjpg / .mp4)"
+              className="mono min-w-0 flex-1 rounded border border-line-strong bg-bg px-1.5 py-0.5 outline-none focus:border-accent"
             />
-            <button className="rounded border border-line-strong px-2 hover:border-accent">Use</button>
+            <button className="rounded border border-line-strong px-1.5 hover:border-accent">Use</button>
           </form>
           <button
             onClick={() => {

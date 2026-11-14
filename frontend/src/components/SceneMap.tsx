@@ -25,9 +25,14 @@ interface Props {
   onPlace?: ((x_m: number, y_m: number) => void) | null;
   /** Responder whose routes are emphasised (others dimmed). */
   focusResponderId?: string | null;
+  /** Routes from the proposal that was just replaced (drawn faintly for comparison). */
+  ghostRoutes?: AStarRoute[];
+  /** Optional floor-plan image stretched over the map bounds. */
+  floorPlan?: { url: string; opacity: number } | null;
+  flashing?: Set<string>;
 }
 
-export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId }: Props) {
+export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId, ghostRoutes = [], floorPlan, flashing }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const scene = state.scenario;
   const grid = scene.scene_map?.occupancy_grid ?? null;
@@ -96,6 +101,10 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
 
       {/* floor */}
       <rect x={0} y={0} width={bounds.w} height={bounds.h} fill="#080d12" stroke="var(--line-strong)" strokeWidth={0.06} />
+
+      {floorPlan && (
+        <image href={floorPlan.url} x={0} y={0} width={bounds.w} height={bounds.h} preserveAspectRatio="none" opacity={floorPlan.opacity} pointerEvents="none" />
+      )}
 
       {/* occupancy grid */}
       {grid &&
@@ -180,6 +189,21 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
             />
           ),
       )}
+
+      {/* replaced proposal (for comparison) */}
+      {ghostRoutes.map((g, i) => (
+        <path
+          key={`ghost-${i}`}
+          d={path(g)}
+          fill="none"
+          stroke="var(--muted)"
+          strokeOpacity={0.55}
+          strokeWidth={0.09}
+          strokeDasharray="0.15 0.3"
+          strokeLinejoin="round"
+          pointerEvents="none"
+        />
+      ))}
 
       {/* proposed (advisory) routes */}
       {proposed.map(
@@ -272,6 +296,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
             className="cursor-pointer"
             opacity={done ? 0.45 : 1}
           >
+            {flashing?.has(c.id) && <circle cx={x} cy={y} r={0.9} fill="none" stroke="var(--warn)" strokeWidth={0.12} className="pulse-ring" />}
             {sev === "immediate" && !done && <circle cx={x} cy={y} r={0.6} fill="none" stroke={meta.color} strokeWidth={0.08} className="pulse-ring" />}
             {sel && <circle cx={x} cy={y} r={1.05} fill="none" stroke="var(--text)" strokeWidth={0.06} />}
             {sev === "unassessed" ? (

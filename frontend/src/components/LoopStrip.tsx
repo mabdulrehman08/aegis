@@ -21,10 +21,12 @@ export function LoopStrip({
   state,
   proposal,
   events,
+  compact = false,
 }: {
   state: SimulationState;
   proposal: SimulationProposal | null;
   events: EventEnvelope[];
+  compact?: boolean;
 }) {
   const cas = state.scenario.casualties;
   const assessed = cas.filter((c) => c.medical_assessment).length;
@@ -86,6 +88,30 @@ export function LoopStrip({
       phase: adapts ? "done" : "idle",
     },
   ];
+
+  if (compact) {
+    return (
+      <ol className="flex min-w-0 items-center gap-1 overflow-hidden" aria-label="Coordination loop">
+        {steps.map((s, i) => (
+          <li
+            key={s.key}
+            title={`${s.label}: ${s.value}`}
+            className={`mono flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${
+              s.phase === "done"
+                ? "border-accent/40 text-accent"
+                : s.phase === "active"
+                  ? "blink border-warn/70 bg-warn/10 text-warn"
+                  : "border-line-strong text-faint"
+            }`}
+          >
+            <span>{s.phase === "done" ? "✓" : i + 1}</span>
+            <span>{s.label}</span>
+            {s.phase === "active" && <span className="normal-case tracking-normal">· {s.value}</span>}
+          </li>
+        ))}
+      </ol>
+    );
+  }
 
   return (
     <ol className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-line bg-line">

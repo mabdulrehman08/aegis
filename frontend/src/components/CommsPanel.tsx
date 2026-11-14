@@ -5,13 +5,11 @@ import { SEVERITY_META, clock, meters, responderName, shortId } from "@/lib/form
 import { directHint, routeToSteps } from "@/lib/navigation";
 import type { AStarRoute, ResponderStatus, SimulationProposal, SimulationState } from "@/lib/types";
 import { Badge } from "./ui";
-import { VideoFeed } from "./VideoFeed";
 
 interface Props {
   state: SimulationState;
   proposal: SimulationProposal | null;
   fighterId: string | null;
-  onFighter: (id: string) => void;
   onStatus: (id: string, status: ResponderStatus) => void;
   placing: boolean;
   onPlace: (on: boolean) => void;
@@ -27,7 +25,8 @@ interface LogLine {
   kind: "voice" | "tts";
 }
 
-export function FighterPane({ state, proposal, fighterId, onFighter, onStatus, placing, onPlace, busy }: Props) {
+/** Voice + guidance for the firefighter selected in the bodycam grid. */
+export function CommsPanel({ state, proposal, fighterId, onStatus, placing, onPlace, busy }: Props) {
   const fighters = state.scenario.responders;
   const f = fighters.find((r) => r.id === fighterId) ?? fighters[0];
   const [log, setLog] = useState<LogLine[]>([]);
@@ -65,45 +64,17 @@ export function FighterPane({ state, proposal, fighterId, onFighter, onStatus, p
   const steps = route && target ? routeToSteps(route, `Victim ${shortId(target.id)}`) : [];
 
   return (
-    <section className="panel flex min-h-0 flex-col">
-      <header className="flex items-center gap-2 border-b border-line px-3 py-1.5">
-        <h2 className="label !text-text">Firefighter cam</h2>
-        <div className="ml-auto flex gap-1" role="tablist">
-          {fighters.map((r) => (
-            <button
-              key={r.id}
-              role="tab"
-              aria-selected={r.id === f.id}
-              onClick={() => onFighter(r.id)}
-              className={`mono flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px] ${
-                r.id === f.id ? "border-text/60 text-text" : "border-line-strong text-muted hover:text-text"
-              }`}
-            >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_COLOR[r.status] }} />
-              {responderName(state, r.id)}
-            </button>
-          ))}
-        </div>
+    <section className="panel flex min-h-0 flex-1 flex-col">
+      <header className="flex items-center gap-2 border-b border-line px-2.5 py-1.5">
+        <h2 className="label !text-text">Comms</h2>
+        <span className="text-[12px] font-semibold">→ {name}</span>
+        {target && (
+          <span className="mono text-[10.5px] text-muted">
+            target {shortId(target.id)} <span style={{ color: SEVERITY_META[sev].color }}>{SEVERITY_META[sev].label}</span>
+            {route ? ` · ${meters(route.distance_m)}` : ""}
+          </span>
+        )}
       </header>
-
-      <div className="p-2 pb-0">
-        <VideoFeed
-          key={f.id}
-          feedId={`bodycam:${f.id}`}
-          title={`BODYCAM · ${name.toUpperCase()}`}
-          className="aspect-video w-full"
-          overlay={
-            target && (
-              <div className="mono flex items-center gap-2 bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-5 text-[10.5px] text-white/90">
-                <span>TARGET {shortId(target.id)}</span>
-                <span style={{ color: SEVERITY_META[sev].color }}>{SEVERITY_META[sev].label.toUpperCase()}</span>
-                {route && <span className="text-white/60">{meters(route.distance_m)} route</span>}
-                <span className="ml-auto text-white/60">{task ? task.status.toUpperCase() : "PROPOSED"}</span>
-              </div>
-            )
-          }
-        />
-      </div>
 
       <div className="scrollbar-thin min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
         {/* status row */}
