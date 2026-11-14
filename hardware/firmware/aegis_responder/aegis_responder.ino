@@ -11,7 +11,9 @@
 //   device joins it and connects to BRIDGE_HOST:BRIDGE_PORT. It reconnects on
 //   its own after walking out of range.
 //
-// Wiring (Grove Base Shield): button -> D2, LED -> D4.
+// Wiring: Grove button -> D2 (via a Grove Base Shield, or a Grove-to-jumper
+// cable: yellow SIG -> D2, red VCC -> 5V, black GND -> GND).
+// Alerts use the on-board LED and the LED matrix; a Grove LED on D4 is optional.
 //
 // Line protocol (one ASCII line per message, '\n' terminated):
 //   Host -> device
@@ -43,7 +45,8 @@ const char *FW_VERSION = "0.2.0";
 const char *DEVICE_ID = "responder-device-01";
 
 const int BUTTON_PIN = 2;
-const int LED_PIN = 4;
+const int LED_PIN = 4;                   // optional external Grove LED
+const int ONBOARD_LED = LED_BUILTIN;     // the board's own "L" LED, always present
 
 const unsigned long DEBOUNCE_MS = 30;
 const unsigned long LONG_PRESS_MS = 1500;
@@ -169,13 +172,18 @@ void retryPendingReport() {
   if (pendingKind[0] != '\0' && millis() - pendingSentAt >= RETRY_MS) sendReport();
 }
 
+void setLed(bool on) {
+  ledOn = on;
+  digitalWrite(LED_PIN, on ? HIGH : LOW);
+  digitalWrite(ONBOARD_LED, on ? HIGH : LOW);
+}
+
 void clearAssignment() {
   state = IDLE;
   commandId[0] = '\0';
   label[0] = '\0';
   urgent = false;
-  digitalWrite(LED_PIN, LOW);
-  ledOn = false;
+  setLed(false);
   showIdle();
 }
 
@@ -324,8 +332,8 @@ void readTcp() {
 void onShortPress() {
   if (state == ALERTING) {
     state = ACKED;
-    digitalWrite(LED_PIN, HIGH);
-    ledOn = true;
+    setLed(true);
+    showText(label);  // stop flashing: the label stays on while the responder is on the way
     queueReport("ACK");
   }
 }
@@ -365,13 +373,21 @@ void readButton() {
 
 // ---------------------------------------------------------------- LED
 
+// While a new task is waiting for acknowledgement, the LEDs blink and the
+// matrix label flashes with them, so the alert is visible with no external LED.
 void updateLed() {
   if (state != ALERTING) return;
   unsigned long period = urgent ? BLINK_FAST_MS : BLINK_SLOW_MS;
   if (millis() - ledToggledAt >= period) {
     ledToggledAt = millis();
-    ledOn = !ledOn;
-    digitalWrite(LED_PIN, ledOn ? HIGH : LOW);
+    setLed(!ledOn);
+    if (ledOn) {
+      showText(label);
+    } else {
+      matrix.beginDraw();
+      matrix.clear();
+      matrix.endDraw();
+    }
   }
 }
 
@@ -381,6 +397,7 @@ void setup() {
   Serial.begin(115200);
   pinMode(BUTTON_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
+  pinMode(ONBOARD_LED, OUTPUT);
   matrix.begin();
 #if AEGIS_WIFI
   WiFi.setTimeout(0);  // make WiFi.begin() non-blocking (see maintainWifi)
