@@ -71,6 +71,9 @@ class BloodEstimator:
         self.settings = settings
         self.min_conf = min_conf
 
+    def _min_fraction(self, region: str) -> float:
+        return self.settings.blood_min_fraction_head if region == "head" else self.settings.blood_min_fraction
+
     def due(self, state: BloodState, t: float) -> bool:
         return t - state.last_check_t >= 1.0 / max(0.1, self.settings.blood_hz)
 
@@ -81,7 +84,7 @@ class BloodEstimator:
             state.checks.append((t, None))
         else:
             state.checks.append((t, {
-                name: share >= self.settings.blood_min_fraction and pixels >= self.settings.blood_min_pixels
+                name: share >= self._min_fraction(name) and pixels >= self.settings.blood_min_pixels
                 for name, (share, pixels) in fractions.items()}))
         while state.checks and t - state.checks[0][0] > self.settings.window_s:
             state.checks.popleft()

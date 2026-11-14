@@ -74,11 +74,14 @@ class SignsSettings:
     eyes_model: str = "face_landmarker.task"
     eyes_hz: float = 3.0
     eyes_window_s: float = 3.0
-    eyes_closed_threshold: float = 0.5
+    eyes_closed_threshold: float = 0.4  # CEW: 95% accuracy (0.5 missed 15% of closed eyes)
     eyes_min_face_px: int = 36
+    eyes_turned_deg: float = 25.0       # head turned more: use the higher eye score
+    eyes_max_yaw_deg: float = 60.0      # head turned more: not_testable
     blood: bool = True
     blood_hz: float = 3.0
     blood_min_fraction: float = 0.04    # red share of a body region to call it detected
+    blood_min_fraction_head: float = 0.02  # head disc is mostly hair/background; wounds are small
     blood_min_pixels: int = 60
     blood_hue_max: int = 10             # red hue (OpenCV 0..180): <= this (orange side) ...
     blood_hue_min_wrap: int = 174       # ... or >= this (magenta side; pink is ~160-172)

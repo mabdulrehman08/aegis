@@ -242,7 +242,7 @@ format and backend asks: `CONTRACT_PROPOSAL.md`.
 | --- | --- | --- |
 | movement | Keypoints vs 1 s ago, divided by body size; `still` after 2 s | Pose visible |
 | response | Press **c** in the window right after the spoken command ("raise your hand if you hear me"). `responded` if a limb moves ≥ 0.15 body size within 8 s; `no_response` only if the person was in view for at least half the window | Limbs visible |
-| eyes | MediaPipe Face Landmarker blink scores on a face crop rotated level (works for faces lying sideways). The model downloads into `cv/models/` on first use | Face ≥ 36 px across; at 2–3 m use 1080p capture |
+| eyes | MediaPipe Face Landmarker blink scores on a face crop rotated level (works for faces lying sideways). Head turned more than 25°: the higher eye score; more than 60°: `not_testable`. The model downloads into `cv/models/` on first use | Face ≥ 36 px across; at 2–3 m use 1080p capture |
 | breathing | Optical flow on the chest while still; rate only from a clear rhythm, same in both halves of 15 s | Person still ~11 s, chest visible |
 | visible blood | Deep-red pixels (green and blue ≤ 0.35 × red, hue ≤ 10 or ≥ 174) per body region: head, torso, arms, legs | No red, pink or magenta clothing or props: their shadows are blood-colored |
 
@@ -262,6 +262,32 @@ torso blood: color alone cannot tell them apart, which is why actors must
 avoid red and pink, and why the fine-tuned model is worth doing. A seated person working at a
 desk moves the chest 5–15 px irregularly, so breathing stays `not_testable`;
 that is intended.
+
+### Testing signs on datasets and stock video
+
+```sh
+python -m cv.tools.signs_report --source clip.mp4 --expect eyes=closed --expect movement=still
+python -m cv.tools.signs_report --source clip.mp4 --command-at 4 --save-video cv/recordings/out.mp4
+python -m cv.tools.eyes_eval --closed .../ClosedFace --open .../OpenFace
+```
+
+`signs_report` runs detector, tracker and signs on every frame of a file and
+prints, per person, how often each sign had each value, the value changes and
+the agreement with `--expect`. `eyes_eval` scores the eye detector on labelled
+faces. Datasets and clips go in `cv/recordings/datasets/` (git-ignored); only
+numbers are saved, to `cv/eval/eyes/` and `cv/eval/signs/`.
+
+Results (Nov 14):
+
+| Data | What it showed |
+| --- | --- |
+| CEW, 2,423 labelled faces | Face found 98–100%. Eyes 95.5% correct at threshold 0.4 (closed 94.6%, open 96.3%). The old 0.5 missed 15% of closed eyes |
+| UR Fall, 10 falls (320×240 Kinect) | 9 of 10 end as `lying`; 6 of 10 keep one ID through the fall. Without floor calibration the tracker cannot re-attach a person after a split |
+| Pexels sleeping man, side profile | Eyes `closed` 88% of testable samples. Before the turned-head fix, 0%: the hidden eye's score dragged the mean to "open" |
+| Pexels three men lying, overhead | Eyes follow the clip: closed 0–6 s, open about 7–15 s, closing again |
+| Mixkit car-crash head wound | Blood `detected` on the head 55% of samples (the wound is out of view in most of the rest). Before the head threshold (2%), 0% |
+| Pexels woman with orange roses | Rose edges read as blood: red and orange props are a real limit of the color method |
+| Breathing | No stock clip had a fixed camera and a still body for 15 s, so this is still only unit-tested. Record our own |
 
 ### Fake casualties (no camera needed)
 
@@ -381,7 +407,7 @@ are not accuracy figures. Mapping error comes from the staged scenario runs.
 python -m pytest cv/tests
 ```
 
-126 tests. The suite covers:
+128 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.

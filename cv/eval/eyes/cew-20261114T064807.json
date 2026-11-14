@@ -1,0 +1,31 @@
+{
+  "run_at_utc": "2026-11-14T06:48:07.995Z",
+  "label": "cew",
+  "pad": 0.35,
+  "images": {
+    "closed": 1192,
+    "open": 1231
+  },
+  "face_found_pct": {
+    "closed": 98.2,
+    "open": 99.8
+  },
+  "threshold": 0.4,
+  "closed_recall_pct": 94.6,
+  "open_recall_pct": 96.3,
+  "accuracy_pct": 95.5,
+  "balanced_accuracy_pct": 95.4,
+  "best_threshold": 0.38,
+  "best_balanced_accuracy_pct": 96.0,
+  "score_closed": {
+    "10": 0.453,
+    "50": 0.629,
+    "90": 0.745
+  },
+  "score_open": {
+    "10": 0.019,
+    "50": 0.094,
+    "90": 0.281
+  },
+  "ms_per_image": 9.0
+}

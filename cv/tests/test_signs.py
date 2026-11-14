@@ -16,7 +16,7 @@ from cv.signs import SCHEMA, SignsEstimator, describe
 from cv.signs.blood import BloodEstimator, BloodState
 from cv.signs.body import L_ELBOW, L_EYE, L_WRIST, NOSE, R_EYE, region_masks
 from cv.signs.breathing import BreathingEstimator, BreathingState, estimate_rate, torso_roi
-from cv.signs.eyes import CROP_PX, EyeEstimator, EyeState, face_crop
+from cv.signs.eyes import CROP_PX, EyeEstimator, EyeState, combine_blinks, face_crop, head_yaw_deg
 from cv.signs.motion import MotionEstimator, MotionState
 from cv.tests.test_publisher import FakeClock, FakeTransport, report
 
@@ -240,6 +240,20 @@ def eyes_value(score):
     for i in range(4):
         estimator.update(state, image, KEYPOINTS, CONF, i * 0.4)
     return estimator.value(state, 1.2)
+
+
+def test_turned_heads_use_the_higher_eye_score_and_profiles_are_not_testable():
+    assert combine_blinks(0.6, 0.5, yaw_deg=5, turned_deg=25, max_yaw_deg=60) == pytest.approx(0.55)
+    # Measured on a sleeping profile: visible eye 0.59, hidden eye 0.17 (mean 0.38 read "open").
+    assert combine_blinks(0.59, 0.17, yaw_deg=-50, turned_deg=25, max_yaw_deg=60) == 0.59
+    assert combine_blinks(0.59, 0.17, yaw_deg=75, turned_deg=25, max_yaw_deg=60) is None
+    assert head_yaw_deg(np.eye(4)) == pytest.approx(0.0)
+
+
+def test_small_head_wound_counts_with_the_head_threshold():
+    estimator = BloodEstimator(SETTINGS)
+    assert estimator._min_fraction("head") == SETTINGS.blood_min_fraction_head < SETTINGS.blood_min_fraction
+    assert estimator._min_fraction("torso") == SETTINGS.blood_min_fraction
 
 
 def test_eye_state_from_blink_scores():

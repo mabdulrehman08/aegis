@@ -49,7 +49,7 @@ signs:
   eyes: true                  # MediaPipe Face Landmarker blink scores (model auto-downloads)
   eyes_hz: 3.0
   eyes_window_s: 3.0
-  eyes_closed_threshold: 0.5
+  eyes_closed_threshold: 0.4  # CEW faces: 0.5 = 92% (closed recall 85%); 0.4 is near the best (96%)
   eyes_min_face_px: 36        # smaller faces are not_testable; use 1080p for eyes at range
   blood: true                 # saturated red inside body regions (color detector)
   blood_hz: 3.0

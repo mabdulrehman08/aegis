@@ -36,8 +36,9 @@ class SignsEstimator:
         self.motion = MotionEstimator(settings, keypoint_min_conf)
         self.blood = BloodEstimator(settings, keypoint_min_conf)
         self.breathing = BreathingEstimator(settings, keypoint_min_conf)
-        self.eyes = EyeEstimator(settings, face_scorer or FaceScorer(resolve(settings.eyes_model, MODELS_DIR)),
-                                 keypoint_min_conf)
+        scorer = face_scorer or FaceScorer(resolve(settings.eyes_model, MODELS_DIR),
+                                           settings.eyes_turned_deg, settings.eyes_max_yaw_deg)
+        self.eyes = EyeEstimator(settings, scorer, keypoint_min_conf)
         self.states: dict[str, _TrackSigns] = {}
         self.command_t: float | None = None
 

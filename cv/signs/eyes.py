@@ -2,8 +2,10 @@
 
 The face is cropped around the pose model's face keypoints, rotated so the eyes
 are level (people lying down have sideways faces, which the face detector
-handles poorly), upscaled, and scored with ``eyeBlinkLeft`` / ``eyeBlinkRight``.
-Small or turned-away faces are ``not_testable``. A 720p webcam gives roughly
+handles poorly), upscaled, and scored with ``eyeBlinkLeft`` / ``eyeBlinkRight``
+(see ``combine_blinks`` for turned heads). Small faces, faces turned more than
+``eyes_max_yaw_deg`` and faces not found are ``not_testable``. Measured on CEW
+(2,423 labelled faces, ``cv.tools.eyes_eval``): 95% accuracy at threshold 0.4. A 720p webcam gives roughly
 40-60 px faces at 2-3 m; use 1080p capture when eyes matter.
 """
 
@@ -55,11 +57,33 @@ def face_crop(image_bgr, keypoints, keypoint_conf, min_conf: float, min_face_px:
                           borderMode=cv2.BORDER_CONSTANT)
 
 
+def head_yaw_deg(matrix) -> float:
+    """Head turn left/right from the Face Landmarker's facial transformation matrix."""
+    rotation = np.asarray(matrix, dtype=float)[:3, :3]
+    return float(math.degrees(math.atan2(-rotation[2, 0], math.hypot(rotation[0, 0], rotation[1, 0]))))
+
+
+def combine_blinks(left: float, right: float, yaw_deg: float, turned_deg: float, max_yaw_deg: float):
+    """One closed score from both eyes, or None when the face is too far turned.
+
+    In a turned face the far eye's blink score is unreliable (measured: 0.17 on
+    one side and 0.55 mirrored for the same closed eye), so the higher score is
+    used, which errs toward "closed" (more attention, never less).
+    """
+    if abs(yaw_deg) > max_yaw_deg:
+        return None
+    if abs(yaw_deg) > turned_deg:
+        return max(left, right)
+    return (left + right) / 2
+
+
 class FaceScorer:
     """Lazy MediaPipe Face Landmarker; disables itself if the model is unavailable."""
 
-    def __init__(self, model_path: Path):
+    def __init__(self, model_path: Path, turned_deg: float = 25.0, max_yaw_deg: float = 60.0):
         self.model_path = model_path
+        self.turned_deg = turned_deg
+        self.max_yaw_deg = max_yaw_deg
         self._landmarker = None
         self.available = True
 
@@ -73,8 +97,8 @@ class FaceScorer:
                 self._download()
             options = vision.FaceLandmarkerOptions(
                 base_options=BaseOptions(model_asset_path=str(self.model_path)),
-                output_face_blendshapes=True, num_faces=1,
-                running_mode=vision.RunningMode.IMAGE)
+                output_face_blendshapes=True, output_facial_transformation_matrixes=True,
+                num_faces=1, running_mode=vision.RunningMode.IMAGE)
             self._landmarker = vision.FaceLandmarker.create_from_options(options)
         except Exception as error:  # missing package / no network: eyes become not_testable
             log.warning("Eye-state detector unavailable (%s); eyes will be not_testable", error)
@@ -104,7 +128,9 @@ class FaceScorer:
         scores = {c.category_name: c.score for c in result.face_blendshapes[0]}
         if "eyeBlinkLeft" not in scores or "eyeBlinkRight" not in scores:
             return None
-        return (scores["eyeBlinkLeft"] + scores["eyeBlinkRight"]) / 2
+        yaw = head_yaw_deg(result.facial_transformation_matrixes[0]) if result.facial_transformation_matrixes else 0.0
+        return combine_blinks(scores["eyeBlinkLeft"], scores["eyeBlinkRight"], yaw,
+                              self.turned_deg, self.max_yaw_deg)
 
 
 @dataclass
