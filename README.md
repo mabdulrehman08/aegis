@@ -46,7 +46,33 @@ Interactive API docs: `http://127.0.0.1:8000/docs`.
 See `docs/LOCAL_SETUP.md` for a standard-library venv alternative.
 See `docs/INTEGRATION.md` for actual simulation routes and event payloads,
 `docs/BENCHMARKS.md` for evaluation definitions, `docs/ADVISORY.md` for grounded
-explanations, and `docs/RL_RESEARCH.md` for deferred research (no PPO training).
+explanations, and `docs/RL_RESEARCH.md` for isolated research boundaries.
+
+## Intelligence enhancements
+
+The demo's default allocation and approval workflow remains unchanged. Temporal
+uncertainty reports distinguish camera detections, zone estimates, human-known
+locations, and unknown positions without inventing medical assessments. Optional
+stricter gates exclude unreliable new work, never cancel approved tasks, and
+require new approval after an impactful policy or freshness change.
+
+The solver supports distance-first, stability-first, and travel-budgeted stability
+policies. Feasibility and protected human priority always dominate these soft
+preferences. Counterfactuals rerun the real solver against copied inputs; they
+cannot approve or dispatch assignments. See `docs/UNCERTAINTY.md` and
+`docs/OPTIMIZATION_DEPTH.md` for model semantics, tradeoffs and fallback limits.
+
+Reproduce deterministic evaluations from the repository root:
+
+```sh
+uv run python -m scripts.evaluate_uncertainty --check
+uv run python -m scripts.compare_scenarios --output /tmp/aegis-comparison.json
+```
+
+Confidence decay is an explicit heuristic, not a calibrated probability or a
+medical score. Synthetic evaluation reports are not evidence of clinical benefit.
+Any authorized PPO experiment lives on a separate experimental branch with its
+own dependencies; the backend never imports or requires a trained policy.
 
 ## Demo-first integration
 
