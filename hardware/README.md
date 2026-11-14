@@ -11,19 +11,35 @@ dispatches; pending, unapproved proposals are never shown.
 
 ## What the device does
 
-| Moment | LED (D4) | LED matrix | Responder does | Bridge reports |
+| Moment | LED matrix | On-board LED | Responder does | Bridge reports |
 | --- | --- | --- | --- | --- |
-| Idle | off | one corner dot | — | — |
-| Approved dispatch arrives | blinks (fast = `immediate` casualty) | casualty label, e.g. `A`, `C3` | — | `delivered` |
-| Responder accepts | solid | label | short press | `acknowledged` |
-| Responder finishes | off | `OK`, then idle | hold 1.5 s | `completed` |
+| Idle | one corner dot (`--` = not connected) | off | — | — |
+| Approved dispatch arrives | casualty label **flashes**, e.g. `A`, `C3` (fast = `immediate`) | blinks | — | `delivered` |
+| Responder accepts | label steady | on | short press | `acknowledged` |
+| Responder finishes | `OK`, then idle | off | hold 1.5 s | `completed` |
+
+The device only uses the medic-confirmed priority for the fast flash, never a
+camera suggestion. Its LED matrix is red: keep it facing away from the camera,
+which detects fake blood by colour.
 
 If the backend resets, completes, or replaces the task, the device clears. The
 reports describe what the responder did, never the casualty's condition.
 
 ## Wiring
 
-Grove Base Shield on the UNO R4 WiFi: **button → D2**, **LED → D4**, USB to the laptop.
+Only a Grove button is needed. Do **not** use a Grove Base Shield: it covers the
+LED matrix. Connect the button with a **Grove-to-male-jumper** cable:
+
+| Wire | Button pin | Arduino pin |
+| --- | --- | --- |
+| yellow | SIG | **2** |
+| red | VCC | **5V** |
+| black | GND | **GND** |
+| white | NC | unused |
+
+Power comes from a USB power bank (USB-C). A Grove LED on pin 4 is optional;
+alerts use the on-board LED and the matrix. Never run the demo with nothing on
+pin 2: a floating input can read as phantom presses.
 
 ## Flash the firmware (once)
 
