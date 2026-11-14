@@ -21,6 +21,15 @@ from backend.app.models import (
     Scenario,
 )
 
+INTELLIGENCE_INTERPRETATION = (
+    "SIMULATION advisory diagnostics. ranking_score is a deterministic recency-weighted "
+    "heuristic for ordering evidence: it is not a calibrated probability, not a clinical "
+    "severity, and not a measure of medical urgency. eligible_for_new_assignment covers "
+    "temporal CV evidence only; routing, capability, availability and capacity feasibility "
+    "are decided separately by the solver. Objective tiers describe the solver's stated "
+    "lexicographic objective, not real-world outcome quality. Nothing here approves, "
+    "dispatches, or contacts any device.")
+
 SimulationMode = Literal["simulation"]
 PositiveRevision = Annotated[int, Field(ge=1, strict=True)]
 CapabilityTag = Annotated[str, Field(min_length=1, pattern=r"\S")]
@@ -341,3 +350,193 @@ class EventPage(ContractModel):
     latest_sequence: int
     oldest_retained_sequence: int | None
     gap: bool
+
+
+ObjectivePolicyName = Literal["distance_first", "stability_first", "bounded_travel_stability"]
+HalfLifeSeconds = Annotated[float, Field(gt=0, le=86400, allow_inf_nan=False)]
+TravelBudgetMeters = Annotated[float, Field(ge=0, le=100000, allow_inf_nan=False)]
+
+
+class IntelligenceSettings(ContractModel):
+    """Opt-in per-scenario intelligence settings. Every default is legacy behavior.
+
+    ``temporal_gate`` makes the temporal uncertainty model's ineligibility an
+    extra exclusion for NEW work only; it never edits CV confidence, positions,
+    or human assessments, never touches active work, and can only tighten the
+    legacy gates (freshness, minimum confidence and position tolerance stay the
+    store's values and are not configurable here). ``decay_gates_eligibility``
+    and ``allow_zone_estimates=false`` are further tightenings; without
+    ``temporal_gate`` they change diagnostics only. ``stability_preference``
+    passes the previous UNAPPROVED recommendation to the solver as a soft
+    preference under ``objective_policy``; count and priority always dominate
+    and approved active work is always hard reserved.
+    """
+
+    temporal_gate: bool = False
+    decay_gates_eligibility: bool = False
+    allow_zone_estimates: bool = True
+    confidence_half_life_seconds: HalfLifeSeconds = 30.0
+    stability_preference: bool = False
+    objective_policy: ObjectivePolicyName = "distance_first"
+    stability_travel_budget_m: TravelBudgetMeters | None = None
+
+    @model_validator(mode="after")
+    def validate_objective(self) -> "IntelligenceSettings":
+        if self.objective_policy != "distance_first" and not self.stability_preference:
+            raise ValueError("objective_policy other than distance_first requires "
+                             "stability_preference: true")
+        bounded = self.objective_policy == "bounded_travel_stability"
+        if bounded != (self.stability_travel_budget_m is not None):
+            raise ValueError("stability_travel_budget_m is required for, and only valid with, "
+                             "bounded_travel_stability")
+        return self
+
+
+class IntelligencePolicyRequest(IntelligenceSettings):
+    """Full replacement (PUT semantics): omitted settings return to defaults."""
+
+    mode: SimulationMode = "simulation"
+    actor: Identifier
+
+
+class IntelligencePolicy(IntelligenceSettings):
+    """Current per-scenario policy. ``version`` 0 is the untouched default;
+    reset restores it."""
+
+    mode: SimulationMode = "simulation"
+    version: int = Field(default=0, ge=0)
+    updated_by: Identifier | None = None
+    updated_at: AwareDatetime | None = None
+
+    def settings(self) -> IntelligenceSettings:
+        return IntelligenceSettings.model_validate(
+            self.model_dump(include=set(IntelligenceSettings.model_fields)))
+
+
+class LegacyThresholds(ContractModel):
+    """Hard gates owned by the store; no intelligence policy can relax them."""
+
+    freshness_seconds: float
+    min_confidence: float
+    position_tolerance_m: float
+
+
+class TemporalUncertainty(ContractModel):
+    """Per-casualty temporal evidence diagnostics at ``evaluated_at``.
+
+    ``location_state``: observed (calibrated or human-known), estimated (zone
+    reference point or occluded track), unknown (stale, future-dated or lost).
+    ``location_evidence``: cv_calibrated_world, cv_zone_estimate, cv_unspecified,
+    human_known, none. ``raw_confidence`` is the detector value unchanged;
+    ``ranking_score`` is a heuristic (see ``interpretation``)."""
+
+    evaluated_at: AwareDatetime
+    observation_id: str | None
+    track_id: str | None
+    track_state: Literal["visible", "occluded", "lost"] | None
+    location_state: Literal["observed", "estimated", "unknown"]
+    location_evidence: Literal["cv_calibrated_world", "cv_zone_estimate", "cv_unspecified",
+                               "human_known", "none"]
+    last_reported_position: Position | None
+    raw_confidence: float | None
+    ranking_score: float | None
+    report_age_seconds: float | None
+    detection_age_seconds: float | None
+    reasons: list[str]
+    eligible_for_new_assignment: bool
+    next_transition_at: AwareDatetime | None
+
+
+class CasualtyIntelligence(ContractModel):
+    """``exclusion_reasons`` are exactly what the temporal gate injected into
+    the solver request (empty when the gate is off, the casualty is eligible,
+    or it has active work). ``zone_reference_position`` is a registered zone's
+    reference point, never an observed coordinate."""
+
+    casualty_id: Identifier
+    track_id: str | None
+    camera: CameraProvenance | None
+    zone_id: str | None
+    zone_reference_position: Position | None
+    active_assignment_id: Identifier | None
+    uncertainty: TemporalUncertainty
+    temporal_gate_applied: bool
+    exclusion_reasons: list[str]
+    warnings: list[str]
+
+
+class ObjectiveTierView(ContractModel):
+    name: str
+    direction: Literal["maximize", "minimize"]
+    value: float
+    proven_optimal: bool
+
+
+class PreviousAssignmentOutcomeView(ContractModel):
+    casualty_id: str
+    responder_id: str
+    outcome: str
+    reasons: list[str]
+
+
+class ProposalReasoning(ContractModel):
+    """Solver objective reasoning recorded for one proposal (copied, not recomputed).
+
+    ``stability_budget_enforced`` is the solver's own guarantee flag: true only
+    when the bounded travel stage actually ran and held the budget.
+    """
+
+    proposal_id: Identifier
+    proposal_revision: PositiveRevision
+    status: str
+    engine: str
+    objective: str | None
+    objective_policy: ObjectivePolicyName
+    stability_budget_enforced: bool = False
+    objective_tiers: list[ObjectiveTierView]
+    objective_values: dict[str, float]
+    previous_assignment_outcomes: list[PreviousAssignmentOutcomeView]
+    applied_assignment_exclusions: dict[str, list[str]]
+    unassigned_casualty_ids: list[str]
+    reasons: dict[str, list[str]]
+    rationale: list[str]
+
+
+class IntelligenceSnapshot(ContractModel):
+    """Read-only view. ``source_valid_until`` is the freshness horizon used to cap
+    proposal expiry; ``next_transition_at`` is the earliest instant at which any
+    temporal reason changes by time alone (diagnostic even with the gate off)."""
+
+    mode: SimulationMode = "simulation"
+    schema_version: Literal["1.0"] = "1.0"
+    scenario_id: Identifier
+    epoch: int
+    scene_revision: PositiveRevision
+    sequence: int
+    map_revision: str | None
+    generated_at: AwareDatetime
+    policy: IntelligencePolicy
+    thresholds: LegacyThresholds
+    casualties: list[CasualtyIntelligence]
+    next_transition_at: AwareDatetime | None
+    source_valid_until: AwareDatetime | None
+    previous_recommendations: list[Assignment]
+    previous_recommendation_proposal_id: Identifier | None
+    proposal: ProposalReasoning | None
+    warnings: list[str]
+    interpretation: str = INTELLIGENCE_INTERPRETATION
+
+
+class ComparisonSource(ContractModel):
+    """The immutable snapshot every comparison run was computed from."""
+
+    epoch: int
+    scene_revision: PositiveRevision
+    sequence: int
+    map_revision: str | None
+    captured_at: AwareDatetime
+    source_valid_until: AwareDatetime | None
+    policy: IntelligenceSettings
+    policy_version: int
+    active_assignment_ids: list[Identifier]
+    previous_recommendation_proposal_id: Identifier | None
