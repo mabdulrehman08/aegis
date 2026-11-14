@@ -82,3 +82,11 @@ solver is absent; fallback and nearest need no extra dependency. For benchmarks,
 use identical request data and fixed `now`, changing only `solver`, and compare
 assigned count, reported allocation points and world-meter travel rather than
 assuming nearest achieves a feasible maximum matching.
+
+## Stability, exclusions and counterfactuals
+
+Optional `previous_assignments`, `objective_policy`, `stability_travel_budget_m` and
+`assignment_exclusions` extend `OptimizationRequest` additively; defaults reproduce
+the legacy solver. `optimization.analysis.analyze_counterfactuals` reruns the real
+solver under at most four validated hypothetical scenarios. See
+`docs/OPTIMIZATION_DEPTH.md`.

@@ -1,9 +1,11 @@
-# Deferred research: reinforcement learning is not in the MVP
+# Reinforcement learning remains outside the live MVP
 
-**No PPO training, dataset bulk download, or live RL policy is authorized.**
-The working engine is A* plus constrained OR-Tools allocation. Research must not
-delay integration. Future training requires Prince's explicit authorization after
-the full MVP passes. A policy must never learn or bypass medical/approval gates.
+The working demo engine remains A* plus constrained OR-Tools allocation.
+Prince's technical-depth directive authorizes a **separate synthetic PPO
+experiment only after uncertainty and advanced optimization pass their tests**.
+It does not authorize a learned policy in the live dispatch pathway or any
+historical dataset processing. Research must not compromise demo reliability.
+A policy must never learn or bypass medical/approval gates.
 
 ## Potential data and what is actually available
 
@@ -28,7 +30,7 @@ responder actions, and counterfactual outcomes needed for a PPO environment.
 Historical dispatch records alone are not an interactive training environment.
 No claims of clinical benefit, mortality reduction, or ready-made PPO data follow.
 
-## Potential Gymnasium-compatible environment (design only)
+## Experimental Gymnasium-compatible environment requirements
 
 - `reset(seed, options)` creates a fully synthetic scenario and reproducible RNG.
   Observation: schema-backed scene/map revision, responder capabilities/status,
@@ -59,6 +61,8 @@ human review, and simulation dispatch gate before becoming executable.
 Use held-out fixed seeds, consistent baseline feasibility, and confidence
 intervals before claiming improvements. Record failures, not just mean reward.
 
-No Gymnasium dependency, PPO trainer, learned weights, or policy hook into live
-dispatch is added. If environment/data work becomes expensive, abandon it and
-continue with the constrained solver.
+The core backend dependency set has no Gymnasium, PPO trainer, learned weights,
+or policy hook into live dispatch. An experiment must use its own dependencies,
+held-out fixed seeds, measured reports, and separate review branch. A trained
+policy is not evidence of clinical safety or permission to dispatch. If an
+experiment underperforms, report that result and retain the constrained solver.

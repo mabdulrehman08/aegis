@@ -1,0 +1,1153 @@
+{
+  "schema": "aegis.uncertainty_evaluation.v1",
+  "epoch": "2026-11-13T12:00:00+00:00",
+  "disclaimer": "Synthetic rule-conformance evaluation of deterministic eligibility constraints. ranking_score is a ranking heuristic, not a calibrated probability, and nothing here measures perception, triage or medical accuracy.",
+  "default_policy": {
+    "freshness_seconds": 30.0,
+    "min_confidence": 0.5,
+    "position_tolerance_m": 0.25,
+    "confidence_half_life_seconds": 30.0,
+    "decay_gates_eligibility": false,
+    "allow_zone_estimates": true
+  },
+  "summary": {
+    "cases": 18,
+    "steps": 35,
+    "passed": 35,
+    "eligible": 15,
+    "excluded": 20,
+    "legacy_compared": 34,
+    "legacy_identical": 25,
+    "stricter_than_legacy": 6,
+    "wider_than_legacy": 0,
+    "exclusions_by_reason": {
+      "decayed_confidence_below_threshold": 3,
+      "location_unknown": 1,
+      "observation_future_dated": 2,
+      "observation_low_confidence": 1,
+      "observation_position_mismatch": 2,
+      "observation_stale": 6,
+      "track_future_dated": 2,
+      "track_lost": 2,
+      "track_occluded": 3,
+      "track_stale": 6,
+      "zone_estimate_not_allowed": 1
+    }
+  },
+  "cases": [
+    {
+      "name": "fresh_visible",
+      "description": "Visible calibrated detection ages through the 30 s freshness window.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 15,
+          "evaluated_at": "2026-11-13T12:00:15+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.636396,
+          "report_age_seconds": 15.0,
+          "detection_age_seconds": 15.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 29.999999,
+          "evaluated_at": "2026-11-13T12:00:29.999999+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.45,
+          "report_age_seconds": 29.999999,
+          "detection_age_seconds": 29.999999,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 30,
+          "evaluated_at": "2026-11-13T12:00:30+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.45,
+          "report_age_seconds": 30.0,
+          "detection_age_seconds": 30.0,
+          "next_transition_at": null,
+          "legacy_reasons": [],
+          "legacy_comparison": "stricter"
+        },
+        {
+          "offset_seconds": 31,
+          "evaluated_at": "2026-11-13T12:00:31+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.439722,
+          "report_age_seconds": 31.0,
+          "detection_age_seconds": 31.0,
+          "next_transition_at": null,
+          "legacy_reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "confidence_at_threshold",
+      "description": "Confidence exactly at min_confidence stays eligible.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.5,
+          "ranking_score": 0.5,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "confidence_below_threshold",
+      "description": "Confidence just below min_confidence is excluded.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_low_confidence"
+          ],
+          "reasons": [
+            "observation_low_confidence"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.49,
+          "ranking_score": 0.49,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [
+            "observation_low_confidence"
+          ],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "future_dated",
+      "description": "Report and detection stamped 10 s ahead of the evaluation clock.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_future_dated",
+            "track_future_dated"
+          ],
+          "reasons": [
+            "observation_future_dated",
+            "track_future_dated"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": -10.0,
+          "detection_age_seconds": -10.0,
+          "next_transition_at": "2026-11-13T12:00:10+00:00",
+          "legacy_reasons": [
+            "observation_future_dated",
+            "track_future_dated"
+          ],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 9.999999,
+          "evaluated_at": "2026-11-13T12:00:09.999999+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_future_dated",
+            "track_future_dated"
+          ],
+          "reasons": [
+            "observation_future_dated",
+            "track_future_dated"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": -1e-06,
+          "detection_age_seconds": -1e-06,
+          "next_transition_at": "2026-11-13T12:00:10+00:00",
+          "legacy_reasons": [
+            "observation_future_dated",
+            "track_future_dated"
+          ],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 10,
+          "evaluated_at": "2026-11-13T12:00:10+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:40+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "stale_detection_fresh_report",
+      "description": "Recent report re-sending a detection last seen 25 s earlier.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.505108,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 25.0,
+          "next_transition_at": "2026-11-13T12:00:05+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 4.999999,
+          "evaluated_at": "2026-11-13T12:00:04.999999+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.45,
+          "report_age_seconds": 4.999999,
+          "detection_age_seconds": 29.999999,
+          "next_transition_at": "2026-11-13T12:00:05+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 5,
+          "evaluated_at": "2026-11-13T12:00:05+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "track_stale"
+          ],
+          "reasons": [
+            "track_stale"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.45,
+          "report_age_seconds": 5.0,
+          "detection_age_seconds": 30.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "stricter"
+        },
+        {
+          "offset_seconds": 30,
+          "evaluated_at": "2026-11-13T12:00:30+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.252554,
+          "report_age_seconds": 30.0,
+          "detection_age_seconds": 55.0,
+          "next_transition_at": null,
+          "legacy_reasons": [
+            "track_stale"
+          ],
+          "legacy_comparison": "same_eligibility"
+        }
+      ]
+    },
+    {
+      "name": "occluded",
+      "description": "Occluded track keeps its last reported position but is never newly assigned.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "track_occluded"
+          ],
+          "reasons": [
+            "track_occluded"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "estimated",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [
+            "track_occluded"
+          ],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 30,
+          "evaluated_at": "2026-11-13T12:00:30+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_stale",
+            "track_occluded",
+            "track_stale"
+          ],
+          "reasons": [
+            "observation_stale",
+            "track_occluded",
+            "track_stale"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.45,
+          "report_age_seconds": 30.0,
+          "detection_age_seconds": 30.0,
+          "next_transition_at": null,
+          "legacy_reasons": [
+            "track_occluded"
+          ],
+          "legacy_comparison": "same_eligibility"
+        }
+      ]
+    },
+    {
+      "name": "lost",
+      "description": "Lost track has unknown location and is never newly assigned.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "track_lost"
+          ],
+          "reasons": [
+            "track_lost"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [
+            "track_lost"
+          ],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "recovery",
+      "description": "Lost, then occluded, then visible again in later reports.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "track_lost"
+          ],
+          "reasons": [
+            "track_lost"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [
+            "track_lost"
+          ],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 5,
+          "evaluated_at": "2026-11-13T12:00:05+00:00",
+          "observation_id": "obs-2",
+          "expected_reasons": [
+            "track_occluded"
+          ],
+          "reasons": [
+            "track_occluded"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "estimated",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:35+00:00",
+          "legacy_reasons": [
+            "track_occluded"
+          ],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 10,
+          "evaluated_at": "2026-11-13T12:00:10+00:00",
+          "observation_id": "obs-3",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:40+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "no_track",
+      "description": "Detection with no track: detection age equals report age.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": null,
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_unspecified",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 30,
+          "evaluated_at": "2026-11-13T12:00:30+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_stale"
+          ],
+          "reasons": [
+            "observation_stale"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_unspecified",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.45,
+          "report_age_seconds": 30.0,
+          "detection_age_seconds": 30.0,
+          "next_transition_at": null,
+          "legacy_reasons": [],
+          "legacy_comparison": "stricter"
+        }
+      ]
+    },
+    {
+      "name": "zone_estimate_default",
+      "description": "Zone reference point accepted by default and labelled estimated.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "zone_estimate",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "estimated",
+          "location_evidence": "cv_zone_estimate",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "zone_estimate_strict",
+      "description": "Opt-in policy refusing zone estimates for new assignments.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": false
+      },
+      "location_basis": "zone_estimate",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "zone_estimate_not_allowed"
+          ],
+          "reasons": [
+            "zone_estimate_not_allowed"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "estimated",
+          "location_evidence": "cv_zone_estimate",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "stricter"
+        }
+      ]
+    },
+    {
+      "name": "position_mismatch_distance",
+      "description": "Reported position 0.3 m from the human-known position.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_position_mismatch"
+          ],
+          "reasons": [
+            "observation_position_mismatch"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [
+            "observation_position_mismatch"
+          ],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "position_within_tolerance",
+      "description": "Reported position 0.2 m from the human-known position.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "position_mismatch_frame",
+      "description": "Reported position in a different coordinate frame.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_position_mismatch"
+          ],
+          "reasons": [
+            "observation_position_mismatch"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [
+            "observation_position_mismatch"
+          ],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "missing_human_known",
+      "description": "No CV observation; authoritative human-known position exists.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": null,
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": null,
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "human_known",
+          "raw_confidence": null,
+          "ranking_score": null,
+          "report_age_seconds": null,
+          "detection_age_seconds": null,
+          "next_transition_at": null,
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 600,
+          "evaluated_at": "2026-11-13T12:10:00+00:00",
+          "observation_id": null,
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "human_known",
+          "raw_confidence": null,
+          "ranking_score": null,
+          "report_age_seconds": null,
+          "detection_age_seconds": null,
+          "next_transition_at": null,
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        }
+      ]
+    },
+    {
+      "name": "missing_unknown",
+      "description": "No CV observation and no authoritative position.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": false,
+        "allow_zone_estimates": true
+      },
+      "location_basis": null,
+      "authoritative_position": null,
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": null,
+          "expected_reasons": [
+            "location_unknown"
+          ],
+          "reasons": [
+            "location_unknown"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "none",
+          "raw_confidence": null,
+          "ranking_score": null,
+          "report_age_seconds": null,
+          "detection_age_seconds": null,
+          "next_transition_at": null,
+          "legacy_reasons": null,
+          "legacy_comparison": null
+        }
+      ]
+    },
+    {
+      "name": "decay_gate",
+      "description": "Opt-in decay gate: 0.9 halves every 30 s and falls below 0.5 at ~25.44 s.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": true,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.9,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:25.439908+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 25,
+          "evaluated_at": "2026-11-13T12:00:25+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [],
+          "reasons": [],
+          "passed": true,
+          "eligible_for_new_assignment": true,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.505108,
+          "report_age_seconds": 25.0,
+          "detection_age_seconds": 25.0,
+          "next_transition_at": "2026-11-13T12:00:25.439908+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "identical"
+        },
+        {
+          "offset_seconds": 26,
+          "evaluated_at": "2026-11-13T12:00:26+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "decayed_confidence_below_threshold"
+          ],
+          "reasons": [
+            "decayed_confidence_below_threshold"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.493571,
+          "report_age_seconds": 26.0,
+          "detection_age_seconds": 26.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "stricter"
+        },
+        {
+          "offset_seconds": 31,
+          "evaluated_at": "2026-11-13T12:00:31+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "observation_stale",
+            "track_stale",
+            "decayed_confidence_below_threshold"
+          ],
+          "reasons": [
+            "observation_stale",
+            "track_stale",
+            "decayed_confidence_below_threshold"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "unknown",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.9,
+          "ranking_score": 0.439722,
+          "report_age_seconds": 31.0,
+          "detection_age_seconds": 31.0,
+          "next_transition_at": null,
+          "legacy_reasons": [
+            "observation_stale",
+            "track_stale"
+          ],
+          "legacy_comparison": "same_eligibility"
+        }
+      ]
+    },
+    {
+      "name": "decay_gate_at_threshold",
+      "description": "Opt-in decay gate excludes confidence equal to the threshold.",
+      "policy": {
+        "freshness_seconds": 30.0,
+        "min_confidence": 0.5,
+        "position_tolerance_m": 0.25,
+        "confidence_half_life_seconds": 30.0,
+        "decay_gates_eligibility": true,
+        "allow_zone_estimates": true
+      },
+      "location_basis": "calibrated_world",
+      "authoritative_position": {
+        "frame_id": "world",
+        "x_m": 4.5,
+        "y_m": 2.5
+      },
+      "steps": [
+        {
+          "offset_seconds": 0,
+          "evaluated_at": "2026-11-13T12:00:00+00:00",
+          "observation_id": "obs-1",
+          "expected_reasons": [
+            "decayed_confidence_below_threshold"
+          ],
+          "reasons": [
+            "decayed_confidence_below_threshold"
+          ],
+          "passed": true,
+          "eligible_for_new_assignment": false,
+          "location_state": "observed",
+          "location_evidence": "cv_calibrated_world",
+          "raw_confidence": 0.5,
+          "ranking_score": 0.5,
+          "report_age_seconds": 0.0,
+          "detection_age_seconds": 0.0,
+          "next_transition_at": "2026-11-13T12:00:30+00:00",
+          "legacy_reasons": [],
+          "legacy_comparison": "stricter"
+        }
+      ]
+    }
+  ]
+}
