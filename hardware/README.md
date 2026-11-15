@@ -189,6 +189,11 @@ restarts the bridge if it ever exits with an error):
 .\hardware\scripts\start-bridge.ps1 -Local                            # backend on this laptop
 ```
 
+The backend listens on port 8000. If the team reaches it through the private
+proxy instead, that is port 8011: add `-BackendPort 8011` (the proxy must pass
+`/health` and `/api/v1/...` through unchanged). Device ports 7777-7780 are
+separate and never go through the proxy.
+
 If PowerShell refuses to run scripts, use
 `powershell -ExecutionPolicy Bypass -File hardware\scripts\start-bridge.ps1 ...`.
 
