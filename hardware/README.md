@@ -175,6 +175,33 @@ show `--`: move its Linux side back to the hotspot.
 Both boards join the same hotspot. The full `scripts.live_demo` rehearsal takes
 `responder-002` offline, so use `--prepare-only` when both devices should get tasks.
 
+## Host the whole demo on this laptop (hotspot)
+
+For the rehearsal and demo, the Windows laptop that runs the hotspot also hosts
+the backend, dashboard, Voice and both bridges. Teammates join the
+`AEGIS-RESPONDER` hotspot; nothing listens on the campus network.
+
+```powershell
+.\hardware\scripts\start-demo-host.ps1            # start everything, then health checks
+.\hardware\scripts\start-demo-host.ps1 -Status    # health checks only
+.\hardware\scripts\start-demo-host.ps1 -Stop      # stop what it started
+.\hardware\scripts\start-demo-host.ps1 -Prepare   # also load the two-actor scene (resets the scenario)
+```
+
+| Service | Address | Who uses it |
+| --- | --- | --- |
+| backend | `http://192.168.137.1:8000` | bridges, dashboard, camera (`--base-url`) |
+| dashboard | `http://192.168.137.1:3000/command` | teammates on the hotspot |
+| dashboard | `http://localhost:3000/command` | this laptop (browser microphone needs localhost) |
+| Voice | `http://127.0.0.1:8010` | reached through the dashboard only |
+| bridges | `192.168.137.1:7777`, `:7778` | the two Arduinos |
+
+Logs are in `hardware/logs/demo-host/`. Run it **once from an Administrator
+PowerShell** so it can add the firewall rule that lets hotspot devices (and only
+those) reach ports 8000 and 3000. `voice/.env` and the neural weights are not in
+git; without them Voice is text-only and `-Neural` is skipped. Close any old
+backend or bridge windows first: the script refuses to start on a busy port.
+
 ## On university WiFi: Tailscale
 
 Campus WiFi is crowded and usually blocks laptops from reaching each other.
