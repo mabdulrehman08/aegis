@@ -153,6 +153,25 @@ Then run one bridge per device, each in its own terminal:
 .\hardware\scripts\start-bridge.ps1 -Wifi -Local -Device 2    # device 2 -> responder-002, port 7778
 ```
 
+### Second board is an Arduino UNO Q
+
+The same sketch builds for the UNO Q (blue 13x8 matrix). Its microcontroller
+reaches the bridge through the board's Linux side (`Arduino_RouterBridge`), so
+there is no `arduino_secrets.h` WiFi join: put the Q's **Linux side** on the
+hotspot instead (App Lab, or `nmcli device wifi connect <hotspot>` in its shell).
+
+```powershell
+arduino-cli core install arduino:zephyr
+arduino-cli lib install Arduino_RouterBridge ArduinoGraphics
+arduino-cli compile --upload --fqbn arduino:zephyr:unoq -p <its COM port> `
+  --build-property "compiler.cpp.extra_flags=-DAEGIS_DEVICE_NUM=2" hardware/firmware/aegis_responder
+```
+
+Wiring is the same (button SIG on pin 2, 5V, GND). On the Q, `AEGIS` scrolls
+continuously while it is linked and idle; `--` means it cannot reach the bridge.
+After a power cycle the Q may rejoin another saved network (e.g. eduroam) and
+show `--`: move its Linux side back to the hotspot.
+
 Both boards join the same hotspot. The full `scripts.live_demo` rehearsal takes
 `responder-002` offline, so use `--prepare-only` when both devices should get tasks.
 
