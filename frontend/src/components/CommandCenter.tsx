@@ -23,6 +23,7 @@ import { LoopStrip } from "./LoopStrip";
 import { AlertStack, SettingsMenu, ShortcutHelp } from "./Overlays";
 import { ProposalPanel } from "./ProposalPanel";
 import { NeuralIntelligencePanel } from "./NeuralIntelligencePanel";
+import { EmsResearchPanel } from "./EmsResearchPanel";
 import { useNeuralComparison } from "@/lib/useNeuralComparison";
 import { SceneMap } from "./SceneMap";
 import { TasksPanel } from "./TasksPanel";
@@ -59,6 +60,10 @@ export function CommandCenter() {
   const [editMap, setEditMap] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  const [emsFocus, setEmsFocus] = useState(false); // header shortcut: open the drawer at the EMS research panel
+  useEffect(() => {
+    if (!drawer) setEmsFocus(false);
+  }, [drawer]);
   const [help, setHelp] = useState(false);
   const [floorPlan, setFloorPlanState] = useState<FloorPlan>(null);
   const [operator, setOperator] = useState("demo-command");
@@ -344,6 +349,7 @@ export function CommandCenter() {
         <div className="min-w-0 flex-1">
           <LoopStrip state={state} proposal={proposal} events={fallback ? [] : events} compact />
         </div>
+        <button onClick={() => { setEmsFocus(true); setDrawer(true); }} className="mono shrink-0 rounded border border-line px-1.5 py-0.5 text-[10px] text-accent hover:border-accent" title="Historical NYC EMS XGBoost research advisory (research only, no dispatch authority)" aria-label="Open historical NYC EMS XGBoost research advisory">EMS ML</button>
         <ThemeToggle compact className="shrink-0" />
         <div className="sim-stripe mono shrink-0 rounded border border-warn/60 px-2 py-0.5 text-[10.5px] font-bold tracking-[0.16em] text-warn">SIMULATION</div>
         <button onClick={toggleMute} className="shrink-0 text-[13px]" title={muted ? "Alert sounds off" : "Alert sounds on"} aria-label="Toggle alert sound">
@@ -520,6 +526,7 @@ export function CommandCenter() {
               isStale={neural.isStale}
               onRefresh={neural.refresh}
             />
+            <EmsResearchPanel scrollIntoViewOnMount={emsFocus} />
             <div className="h-[360px] shrink-0">
               <TasksPanel state={state} busy={busy} onSimulate={(a, kind) => void act(`Simulated ${kind}`, () => api.simulateDevice(a.id, kind))} />
             </div>
