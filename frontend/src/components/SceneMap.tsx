@@ -84,6 +84,43 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
   const resolved = new Set(state.resolved_casualty_ids);
   const trackByCasualty = new Map(state.tracks.filter((t) => t.casualty_id).map((t) => [t.casualty_id!, t]));
 
+  // Fine grids (building walls at 0.25 m) are drawn as one path of blocked cells, not a rect per cell.
+  const fine = !!grid && grid.width * grid.height > 2500;
+  // Cells that are walls in the drawn outline are already shown as outline lines; only draw extra
+  // blocked cells (operator "Block route" edits) so the map stays clean.
+  const fineBlocked = useMemo(() => {
+    if (!grid || !fine) return "";
+    const r = grid.resolution_m;
+    const drawn = (row: number, col: number) =>
+      !!outline && outline.walls.length === grid.height && outline.walls[grid.height - 1 - row]?.[col] === "#";
+    const extra = (row: number, col: number) => grid.cells[row * grid.width + col] !== 0 && !drawn(row, col);
+    let d = "";
+    for (let row = 0; row < grid.height; row++) {
+      for (let col = 0; col < grid.width; col++) {
+        if (!extra(row, col)) continue;
+        let end = col;
+        while (end + 1 < grid.width && extra(row, end + 1)) end++;
+        const x = grid.origin.x_m + col * r - bounds.x0;
+        const y = bounds.h - (grid.origin.y_m + (row + 1) * r - bounds.y0);
+        d += `M${x},${y}h${(end - col + 1) * r}v${r}h${-(end - col + 1) * r}z`;
+        col = end;
+      }
+    }
+    return d;
+  }, [grid, fine, bounds, outline]);
+  const fineCellAt = (clientX: number, clientY: number): [number, number] | null => {
+    if (!grid || !svgRef.current) return null;
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const m = svgRef.current.getScreenCTM();
+    if (!m) return null;
+    const p = pt.matrixTransform(m.inverse());
+    const col = Math.floor((p.x + bounds.x0 - grid.origin.x_m) / grid.resolution_m);
+    const row = Math.floor((bounds.h - p.y + bounds.y0 - grid.origin.y_m) / grid.resolution_m);
+    return col >= 0 && col < grid.width && row >= 0 && row < grid.height ? [row, col] : null;
+  };
+
   const ticks = (len: number, step: number) => Array.from({ length: Math.floor(len / step) + 1 }, (_, i) => i * step);
 
   return (
@@ -145,8 +182,30 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
       )}
 
       {/* occupancy grid */}
+      {showRouting && grid && fine && (
+        <g data-routing-grid="fine" data-blocked-cells={grid.cells.filter((v) => v !== 0).length}>
+          <path d={fineBlocked} fill="url(#hatch)" stroke="var(--map-obstacle)" strokeWidth={0.03} pointerEvents="none" />
+          {editMode && (
+            <rect
+              x={0}
+              y={0}
+              width={bounds.w}
+              height={bounds.h}
+              fill="transparent"
+              className="cursor-crosshair"
+              onClick={(e) => {
+                e.stopPropagation();
+                const cell = fineCellAt(e.clientX, e.clientY);
+                if (cell) onToggleCell(cell[0], cell[1]);
+              }}
+            />
+          )}
+        </g>
+      )}
+
       {showRouting &&
         grid &&
+        !fine &&
         grid.cells.map((v, i) => {
           const col = i % grid.width;
           const row = Math.floor(i / grid.width);

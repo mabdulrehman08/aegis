@@ -19,6 +19,7 @@ import { FeedFrame, useFeedOrder, useSlotRects } from "./FeedStage";
 import { FEED_STATUS_LABEL, MAP_FEED_ID, type FeedStatus } from "@/lib/feeds";
 import { FloorPicker } from "./FloorPicker";
 import { ROUTING_FLOOR, floorAssignments, floorById, floorSummaries } from "@/lib/floors";
+import { buildingSceneMap, isBuildingMap, reopenUnderPeople } from "@/lib/buildingMap";
 import { CommandDock } from "./CommandDock";
 import { CommsPanel } from "./CommsPanel";
 import { LoopStrip } from "./LoopStrip";
@@ -69,6 +70,10 @@ export function CommandCenter() {
   const [help, setHelp] = useState(false);
   const [floorPlan, setFloorPlanState] = useState<FloorPlan>(null);
   const [floor, setFloor] = useState(ROUTING_FLOOR); // floor shown on the scene map
+  // Route around the routing floor's building walls (publishes them as the A* occupancy grid).
+  const [buildingWalls, setBuildingWallsState] = useState(true);
+  const replacedMap = useRef<SceneMapT | null>(null); // map we replaced, restored when walls are switched off
+  const wallsInFlight = useRef<string | null>(null);
   const [operator, setOperator] = useState("demo-command");
 
   const proposal = state?.current_proposal_id ? state.proposals.find((p) => p.id === state.current_proposal_id) ?? null : null;
@@ -102,6 +107,7 @@ export function CommandCenter() {
     try {
       const saved = localStorage.getItem("aegis.operator");
       if (saved) setOperator(saved);
+      if (localStorage.getItem("aegis.buildingWalls") === "off") setBuildingWallsState(false);
       const fp = localStorage.getItem("aegis.floorplan");
       if (fp) setFloorPlanState(JSON.parse(fp));
     } catch {
@@ -145,6 +151,53 @@ export function CommandCenter() {
     },
     [readOnly, run, toast],
   );
+
+  // Building walls → routing grid. Keeps the live map in sync: publishes the walls when the map is the
+  // seeded/other map (e.g. after Reset) and reopens a wall cell if someone is marked on a wall line.
+  const liveMap = sim.state?.scenario.scene_map ?? null;
+  useEffect(() => {
+    if (readOnly || !buildingWalls || !sim.state || pending !== null || (link !== "live" && link !== "polling")) return;
+    const st = sim.state;
+    const next = isBuildingMap(liveMap) ? reopenUnderPeople(st, liveMap!) : buildingSceneMap(st, ROUTING_FLOOR);
+    if (!next || wallsInFlight.current === next.map.revision) return;
+    if (!isBuildingMap(liveMap) && liveMap) {
+      replacedMap.current = liveMap;
+      try {
+        localStorage.setItem("aegis.replacedMap", JSON.stringify(liveMap));
+      } catch {
+        /* ignore */
+      }
+    }
+    wallsInFlight.current = next.map.revision;
+    const who = next.opened.map((id) => responderName(st, id) || shortId(id)).join(", ");
+    void act("Building walls", () => api.updateMap(next.map)).then((r) => {
+      // A failed publish is not retried for the same revision (avoids an error loop); toggling walls retries.
+      if (!r) return;
+      if (!isBuildingMap(liveMap)) toast("info", `Routing now follows ${floorById(ROUTING_FLOOR).short} walls and doors${who ? ` (opened wall under ${who})` : ""}`);
+      else if (who) toast("info", `Opened the wall cell under ${who} so a route can reach them`);
+    });
+  }, [readOnly, buildingWalls, sim.state, liveMap, pending, link, act, toast]);
+
+  const setBuildingWalls = (on: boolean) => {
+    setBuildingWallsState(on);
+    wallsInFlight.current = null;
+    try {
+      localStorage.setItem("aegis.buildingWalls", on ? "on" : "off");
+    } catch {
+      /* ignore */
+    }
+    if (!on && isBuildingMap(liveMap)) {
+      let back = replacedMap.current;
+      try {
+        back ??= JSON.parse(localStorage.getItem("aegis.replacedMap") ?? "null") as SceneMapT | null;
+      } catch {
+        /* ignore */
+      }
+      if (back && back.frame_id !== liveMap?.frame_id) back = null;
+      if (back) void act("Restore map", () => api.updateMap(back)).then((r) => r && toast("info", "Routing back on the previous map"));
+      else toast("info", "Walls off — Reset restores the demo map");
+    }
+  };
 
   // Floors: which floor each person is on, and who is detected where (drives the floor picker).
   const floorOf = useMemo(() => floorAssignments(state, flags.multiFloor), [state, flags.multiFloor]);
@@ -330,6 +383,17 @@ export function CommandCenter() {
                   }}
                 >
                   {placing ? "Click map…" : `Mark ${responderName(state, activeFighter ?? "")}`}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={buildingWalls && isBuildingMap(liveMap) ? "primary" : "ghost"}
+                  disabled={readOnly}
+                  aria-pressed={buildingWalls}
+                  onClick={() => setBuildingWalls(!buildingWalls)}
+                  title={`Route around ${floorById(ROUTING_FLOOR).short} building walls (doors only). Publishes the walls as the routing grid.`}
+                  data-testid="walls-toggle"
+                >
+                  {buildingWalls ? (isBuildingMap(liveMap) ? "Walls on" : "Walls…") : "Walls off"}
                 </Button>
                 <Button
                   size="sm"
