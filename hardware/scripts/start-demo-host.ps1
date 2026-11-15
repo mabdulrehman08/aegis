@@ -157,9 +157,15 @@ function Show-Health {
     else { Note "firewall rule 'AEGIS demo host' missing: other laptops may be blocked (run once as Administrator)" }
 
     Say ""
-    Say "Teammates (joined to the hotspot):" "Cyan"
-    Say "  dashboard  http://${HostIp}:$DashboardPort/command"
-    Say "  camera/CV  --base-url $backendUrl"
+    if ($tsIp) {
+        Say "Teammates' laptops (campus WiFi + Tailscale; keep them off the hotspot):" "Cyan"
+        Say "  dashboard  http://${tsIp}:$DashboardPort/command"
+        Say "  camera/CV  --backend-url http://${tsIp}:$BackendPort"
+    } else {
+        Say "Teammates (joined to the hotspot):" "Cyan"
+        Say "  dashboard  http://${HostIp}:$DashboardPort/command"
+        Say "  camera/CV  --backend-url $backendUrl"
+    }
     Say "This laptop: http://localhost:$DashboardPort/command (push-to-talk works here)"
     if ($failed) { Say "$failed check(s) failed." "Red" } else { Say "All checks passed." "Green" }
 }
@@ -270,7 +276,20 @@ if (-not $NoDashboard) {
         foreach ($key in $dashEnv.Keys) { Set-Item -Path "env:$key" -Value $dashEnv[$key] }
         Push-Location $frontend
         try {
-            if (-not (Test-Path "node_modules")) { & cmd /c "npm install --no-audit --no-fund > `"$logDir\dashboard-install.log`" 2>&1" }
+            # Install when packages are missing or package.json / the lock file changed
+            # since the last install (a pull can add dependencies).
+            $installed = "node_modules\.package-lock.json"
+            $needInstall = -not (Test-Path $installed)
+            if (-not $needInstall) {
+                $at = (Get-Item $installed).LastWriteTimeUtc
+                foreach ($f in "package.json", "package-lock.json") {
+                    if ((Test-Path $f) -and (Get-Item $f).LastWriteTimeUtc -gt $at) { $needInstall = $true }
+                }
+            }
+            if ($needInstall) {
+                Say "Installing dashboard packages..."
+                & cmd /c "npm install --no-audit --no-fund > `"$logDir\dashboard-install.log`" 2>&1"
+            }
             & cmd /c "npm run build > `"$logDir\dashboard-build.log`" 2>&1"
             if ($LASTEXITCODE -ne 0) { Say "ERROR: dashboard build failed. See $logDir\dashboard-build.log" "Red" }
             else { Set-Content -Path $stampFile -Value $stamp -Encoding utf8 }
