@@ -152,9 +152,8 @@ export function CommandCenter() {
   const visibleIds = useMemo(() => new Set(Object.keys(floorOf).filter((id) => floorOf[id] === floor)), [floorOf, floor]);
   const onRoutingFloor = floor === ROUTING_FLOOR;
   const floorDef = floorById(floor);
-  // A plan uploaded in Settings is calibrated to the routing grid, so it replaces the built-in L1 drawing only.
-  const shownPlan =
-    onRoutingFloor && floorPlan ? floorPlan : floorDef.plan ? { url: floorDef.plan, opacity: 0.55, fit: "contain" as const } : null;
+  // A plan image uploaded in Settings is calibrated to the routing grid, so it only shows on that floor.
+  const shownPlan = onRoutingFloor ? floorPlan : null;
 
   const select = (id: string | null) => {
     setSelected(id);
@@ -368,6 +367,7 @@ export function CommandCenter() {
                 floorPlan={shownPlan}
                 flashing={flashing}
                 visibleIds={visibleIds}
+                outline={floorDef.outline}
                 showRouting={onRoutingFloor}
                 floorLabel={`${floorDef.short} ${floorDef.name}`}
               />

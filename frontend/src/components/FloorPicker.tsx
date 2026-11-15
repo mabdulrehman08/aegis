@@ -103,7 +103,7 @@ export function FloorPicker({
                   <span className="min-w-0">
                     <span className="block truncate text-text">{f.name}</span>
                     <span className="block truncate text-[9.5px] text-faint">
-                      {f.plan ? "" : "no plan · "}
+                      {f.outline ? "" : "no plan · "}
                       {s.responders ? `${s.responders} FF` : "no FF"}
                     </span>
                   </span>

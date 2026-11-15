@@ -1,3 +1,4 @@
+import { FLOOR_OUTLINES, type FloorOutline } from "./floorOutlines";
 import type { SimulationState } from "./types";
 
 /**
@@ -13,16 +14,15 @@ export interface FloorDef {
   level: number;
   short: string;
   name: string;
-  /** Plan image in /public, or null when we have no drawing for this floor yet. */
-  plan: string | null;
+  /** Simplified building outline (from the floor-plan drawings), or null when we have no drawing yet. */
+  outline: FloorOutline | null;
 }
 
 export const FLOORS: FloorDef[] = [
-  { id: "L1", level: 1, short: "L1", name: "Ground · Entry", plan: "/floorplans/level-1.png" },
-  { id: "L2", level: 2, short: "L2", name: "Level 2", plan: null },
-  { id: "L3", level: 3, short: "L3", name: "Level 3", plan: "/floorplans/level-3.png" },
-  { id: "L4", level: 4, short: "L4", name: "Level 4", plan: null },
-  { id: "L5", level: 5, short: "L5", name: "Level 5", plan: null },
+  { id: "A", level: 0, short: "A", name: "Campus · A level", outline: FLOOR_OUTLINES.A },
+  { id: "L1", level: 1, short: "L1", name: "Ground · Entry", outline: FLOOR_OUTLINES.L1 },
+  { id: "L2", level: 2, short: "L2", name: "Level 2", outline: FLOOR_OUTLINES.L2 },
+  { id: "L3", level: 3, short: "L3", name: "Level 3", outline: FLOOR_OUTLINES.L3 },
 ];
 
 /** The floor the backend grid, obstacles and routes belong to. */
@@ -30,8 +30,8 @@ export const ROUTING_FLOOR = "L1";
 
 export const floorById = (id: string) => FLOORS.find((f) => f.id === id) ?? FLOORS[0];
 
-/** Mock spread used only by the PREVIEW flag: alternate people between the floors we have plans for. */
-const PREVIEW_CYCLE = ["L1", "L3"];
+/** Mock spread used only by the PREVIEW flag: cycle people through the floors. */
+const PREVIEW_CYCLE = ["L1", "L2", "L3", "A"];
 
 /** entity id (casualty, track, responder) → floor id. */
 export function floorAssignments(state: SimulationState | null, preview: boolean): Record<string, string> {

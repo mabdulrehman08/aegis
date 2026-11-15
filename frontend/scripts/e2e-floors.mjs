@@ -36,11 +36,13 @@ try {
   const info = () =>
     page.evaluate(() => {
       const map = document.querySelector(`[data-feed-id="scene-map"], [data-feed-id="map"]`) ?? document.querySelector("[data-map-floor]")?.closest("[data-feed-id]");
-      const img = map?.querySelector("image.floorplan-img");
+      const ol = map?.querySelector("[data-outline-cells]");
       return {
         floor: map?.querySelector("[data-map-floor]")?.getAttribute("data-map-floor"),
         mapSlot: map?.getAttribute("data-feed-slot"),
-        plan: img?.getAttribute("data-floorplan") ?? null,
+        outline: ol ? Number(ol.getAttribute("data-outline-cells")) : 0,
+        rooms: ol ? Number(ol.getAttribute("data-outline-rooms")) : 0,
+        image: !!map?.querySelector("svg image"),
         casualties: map?.querySelectorAll('[data-entity="casualty"]').length ?? 0,
         responders: map?.querySelectorAll('[data-entity="responder"]').length ?? 0,
         gridCells: map?.querySelectorAll("svg rect[stroke='var(--map-cell-line)']").length ?? 0,
@@ -70,13 +72,14 @@ try {
   if (pos.dx < 0 || pos.dx > 20 || pos.dy < 0 || pos.dy > 60) fail(`picker not at primary top-left: ${JSON.stringify(pos)}`);
   ok(`picker pinned to primary viewport top-left (+${Math.round(pos.dx)}, +${Math.round(pos.dy)})`);
   let s = await info();
-  if (s.floor !== "L1" || s.plan !== "/floorplans/level-1.png" || s.gridCells === 0) fail(`L1 view wrong: ${JSON.stringify(s)}`);
-  ok(`L1 shows ground plan + routing grid (${s.casualties} victims, ${s.responders} FF)`);
+  if (s.floor !== "L1" || !s.outline || s.image || s.gridCells === 0) fail(`L1 view wrong: ${JSON.stringify(s)}`);
+  if (s.rooms < 20) fail(`L1 room outlines missing: ${s.rooms}`);
+  ok(`L1 shows floor + ${s.rooms} room outlines (no drawing) + routing grid (${s.casualties} victims, ${s.responders} FF)`);
   await openPicker();
   let c = await counts();
-  if (Object.keys(c).join() !== "L5,L4,L3,L2,L1") fail(`floor grid order ${Object.keys(c)}`);
-  if (c.L3 || c.L2 || c.L4 || c.L5) fail(`people on upper floors without floor data: ${JSON.stringify(c)}`);
-  ok(`dropdown grid L5→L1, people only on L1 (${c.L1})`);
+  if (Object.keys(c).join() !== "L3,L2,L1,A") fail(`floor grid order ${Object.keys(c)}`);
+  if (c.L3 || c.L2 || c.A) fail(`people on other floors without floor data: ${JSON.stringify(c)}`);
+  ok(`dropdown grid L3→A (no L4/L5), people only on L1 (${c.L1})`);
   await shot("floors-dropdown-default");
   await page.keyboard.press("Escape");
   await sleep(150);
@@ -85,12 +88,15 @@ try {
 
   await pick("L3");
   s = await info();
-  if (s.floor !== "L3" || s.plan !== "/floorplans/level-3.png" || s.gridCells !== 0 || s.casualties !== 0 || !s.empty) fail(`L3 view wrong: ${JSON.stringify(s)}`);
-  ok("L3 shows level-3 plan, no routing grid, honest 'No one detected'");
+  if (s.floor !== "L3" || !s.outline || s.image || s.gridCells !== 0 || s.casualties !== 0 || !s.empty) fail(`L3 view wrong: ${JSON.stringify(s)}`);
+  ok("L3 shows level-3 outline, no routing grid, honest 'No one detected'");
+  for (const f of ["L2", "A"]) {
+    await pick(f);
+    s = await info();
+    if (s.floor !== f || !s.outline || s.rooms < 20 || s.gridCells !== 0) fail(`${f} view wrong: ${JSON.stringify(s)}`);
+    ok(`${f} shows floor + ${s.rooms} room outlines`);
+  }
   await pick("L2");
-  s = await info();
-  if (s.floor !== "L2" || s.plan !== null) fail(`L2 view wrong: ${JSON.stringify(s)}`);
-  ok("L2 (no drawing) shows map without a plan");
 
   console.log("Panel swapping still works:");
   const cam = await page.$('[data-feed-slot="secondary"]:not(:has([data-map-floor]))');
@@ -114,8 +120,8 @@ try {
   await load(true);
   await openPicker();
   c = await counts();
-  if (!(c.L1 > 0 && c.L3 > 0)) fail(`preview should spread people over L1/L3: ${JSON.stringify(c)}`);
-  ok(`people detected L1=${c.L1}, L3=${c.L3}`);
+  if (!(c.L1 > 0 && c.L2 > 0 && c.L3 > 0)) fail(`preview should spread people over floors: ${JSON.stringify(c)}`);
+  ok(`people detected L1=${c.L1}, L2=${c.L2}, L3=${c.L3}, A=${c.A}`);
   const banner = await page.evaluate(() => document.body.textContent.includes("floor assignments are mock") || /floor assignments/.test(document.body.textContent));
   if (!banner) fail("preview banner missing floor assignments");
   ok("PREVIEW banner names floor assignments");

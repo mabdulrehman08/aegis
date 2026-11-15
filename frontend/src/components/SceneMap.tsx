@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 import { SEVERITY_META, ageSeconds, meters, shortId } from "@/lib/format";
 import { getInvalidatedAssignments, isRouteStale } from "@/lib/routeInvalidation";
+import type { FloorOutline } from "@/lib/floorOutlines";
 import type { AStarRoute, AssignmentStatus, SimulationProposal, SimulationState } from "@/lib/types";
 
 const STALE_S = 30; // backend observation freshness window
@@ -29,7 +30,7 @@ interface Props {
   /** Routes from the proposal that was just replaced (drawn faintly for comparison). */
   ghostRoutes?: AStarRoute[];
   /** Optional floor-plan image stretched over the map bounds. */
-  floorPlan?: { url: string; opacity: number; fit?: "stretch" | "contain" } | null;
+  floorPlan?: { url: string; opacity: number } | null;
   flashing?: Set<string>;
   /** Only these entity ids (casualties, tracks, responders) are drawn; null/undefined draws everyone. */
   visibleIds?: Set<string> | null;
@@ -37,9 +38,11 @@ interface Props {
   showRouting?: boolean;
   /** Floor name shown in the map caption. */
   floorLabel?: string;
+  /** Simplified building outline drawn on the floor (cells over the map bounds, row 0 = north edge). */
+  outline?: FloorOutline | null;
 }
 
-export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId, ghostRoutes = [], floorPlan, flashing, visibleIds, showRouting = true, floorLabel }: Props) {
+export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId, ghostRoutes = [], floorPlan, flashing, visibleIds, showRouting = true, floorLabel, outline }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const scene = state.scenario;
   const grid = scene.scene_map?.occupancy_grid ?? null;
@@ -119,18 +122,26 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
       <rect x={0} y={0} width={bounds.w} height={bounds.h} fill="var(--map-floor)" stroke="var(--line-strong)" strokeWidth={0.06} />
 
       {floorPlan && (
-        <image
-          href={floorPlan.url}
-          x={0}
-          y={0}
-          width={bounds.w}
-          height={bounds.h}
-          preserveAspectRatio={floorPlan.fit === "contain" ? "xMidYMid meet" : "none"}
-          opacity={floorPlan.opacity}
-          pointerEvents="none"
-          className="floorplan-img"
-          data-floorplan={floorPlan.url.startsWith("data:") ? "custom" : floorPlan.url}
-        />
+        <image href={floorPlan.url} x={0} y={0} width={bounds.w} height={bounds.h} preserveAspectRatio="none" opacity={floorPlan.opacity} pointerEvents="none" />
+      )}
+
+      {/* building outline: footprint fill, room outlines, perimeter */}
+      {outline && (
+        <g pointerEvents="none" data-outline-cells={outline.cells} data-outline-rooms={outline.rooms}>
+          <path d={outline.fill} fill="var(--map-outline-fill)" />
+          {!showRouting && (
+            <g stroke="var(--map-cell-line)" strokeWidth={0.02}>
+              {ticks(bounds.w, 1).map((t) => (
+                <line key={`gx${t}`} x1={t} y1={0} x2={t} y2={bounds.h} />
+              ))}
+              {ticks(bounds.h, 1).map((t) => (
+                <line key={`gy${t}`} x1={0} y1={t} x2={bounds.w} y2={t} />
+              ))}
+            </g>
+          )}
+          <path d={outline.roomEdges} fill="none" stroke="var(--map-room-line)" strokeWidth={0.04} strokeLinecap="square" />
+          <path d={outline.perimeter} fill="none" stroke="var(--map-outline)" strokeWidth={0.1} strokeLinecap="square" />
+        </g>
       )}
 
       {/* occupancy grid */}
@@ -459,3 +470,4 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
     </svg>
   );
 }
+
