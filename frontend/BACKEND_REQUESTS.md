@@ -110,9 +110,21 @@ puts everyone on L1 (the routing floor); a PREVIEW flag spreads people over floo
 produced the observation or from the responder's reported position, plus a `floor_id` on
 `OccupancyGrid` so routing knows which floor it covers (cross-floor routing can come later).
 
----
+## 8. Safe shared map updates  *(priority: medium — building walls / Block route)*
 
-### Already integrated (no request needed)
+**Why:** building walls publish a new routing map through `PUT /map`. The dashboard re-reads the
+live revision right before publishing and aborts if it changed, but two operators can still race
+in the gap between that read and the write.
+
+**Ask:**
+
+- An optional `if_revision` on `PUT /map` (or an `If-Match` header carrying the current map
+  revision): reject with 409 when the live map is no longer that revision.
+- Planner endpoint snapping: when a responder or casualty position touches a blocked cell, plan
+  from/to the nearest free cell within a small radius and report the snap in the route. Today the
+  UI can only flag "NO ROUTE (ON WALL)" for casualties (no API moves them) and offer an opt-in
+  demo correction for responders. Walls are never opened under people.
+ (no request needed)
 
 - Camera observed signs (`aegis-cv-signs/0.1`): shown per victim with source, value, confidence,
   observed time/age, `not_testable`, stale; literal wording per `docs/CAMERA_SIGNS_INTEGRATION.md`.

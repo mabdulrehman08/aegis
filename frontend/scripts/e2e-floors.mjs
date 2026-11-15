@@ -29,7 +29,6 @@ try {
     await page.evaluate((p) => {
       localStorage.setItem("aegis.preview", JSON.stringify({ multiFloor: p }));
       localStorage.removeItem("aegis.floorplan");
-      localStorage.removeItem("aegis.buildingWalls");
     }, preview);
     await page.reload({ waitUntil: "networkidle2" });
     await page.waitForSelector(PICKER, { timeout: 15000 });
@@ -120,42 +119,11 @@ try {
   if (s.mapSlot !== "primary" || s.floor !== "L3") fail(`floor pick did not bring map back: ${JSON.stringify(s)}`);
   ok("choosing a floor while a camera is primary swaps the map back to the main panel");
 
-  console.log("Building walls → routing:");
-  const live = async () => {
-    const st = await (await fetch(`${BACKEND}/api/v1/simulations/demo/state`)).json();
-    return st;
-  };
-  const waitRev = async (pred, what) => {
-    for (let i = 0; i < 40; i++) {
-      const st = await live();
-      const prop = st.proposals?.find((x) => x.id === st.current_proposal_id);
-      if (pred(st.scenario.scene_map.revision) && prop && prop.map_revision === st.scenario.scene_map.revision) return { st, prop };
-      await sleep(300);
-    }
-    fail(`timed out waiting for ${what}`);
-  };
-  let { st, prop } = await waitRev((r) => r.startsWith("bldg-L1-"), "building walls map + replan");
-  const g = st.scenario.scene_map.occupancy_grid;
-  const onWall = (q) => g.cells[Math.floor(q.y_m / g.resolution_m) * g.width + Math.floor(q.x_m / g.resolution_m)] !== 0;
-  let routed = 0;
-  for (const a of prop.assignments) {
-    const w = a.route?.waypoints ?? [];
-    if (w.slice(1, -1).some(onWall)) fail(`${a.responder_id}→${a.casualty_id} route goes through a wall`);
-    for (let i = 1; i < w.length; i++) {
-      const dx = Math.abs(w[i].x_m - w[i - 1].x_m), dy = Math.abs(w[i].y_m - w[i - 1].y_m);
-      if (i > 1 && i < w.length - 1 && dx + dy > g.resolution_m + 1e-6) fail("route jumps over cells");
-    }
-    routed++;
-  }
-  ok(`walls published (${st.scenario.scene_map.revision}, ${g.width}×${g.height} @ ${g.resolution_m} m); ${routed} recommended routes avoid every wall cell`);
-  if ((await page.$eval('[data-testid="walls-toggle"]', (e) => e.textContent)) !== "Walls on") fail("walls toggle not on");
-  await page.click('[data-testid="walls-toggle"]');
-  ({ st } = await waitRev((r) => r === "sim-demo-map-1", "restored demo map"));
-  ok("Walls off → previous map restored and replanned");
-  await page.click('[data-testid="walls-toggle"]');
-  ({ st } = await waitRev((r) => r.startsWith("bldg-L1-"), "walls re-applied"));
-  ok("Walls on → building walls re-applied");
-  await shot("floors-walls-routes");
+  console.log("Building walls are opt-in:");
+  const st0 = await (await fetch(`${BACKEND}/api/v1/simulations/demo/state`)).json();
+  if (st0.scenario.scene_map?.revision?.startsWith("bldg-")) fail("walls were published without an operator action");
+  if ((await page.$eval('[data-testid="walls-toggle"]', (e) => e.dataset.walls)) !== "off") fail("walls toggle should be off");
+  ok("viewing the dashboard published nothing; Walls off (full flow: scripts/e2e-walls.mjs)");
 
   console.log("PREVIEW multi-floor:");
   await load(true);

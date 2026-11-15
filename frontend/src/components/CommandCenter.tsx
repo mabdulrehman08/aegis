@@ -11,7 +11,7 @@ import { proposalDiff } from "@/lib/insights";
 import { getInvalidatedAssignments } from "@/lib/routeInvalidation";
 import { useDeviceStatus, usePreviewFlags, useSensorVitals } from "@/lib/preview";
 import { buildReport, download } from "@/lib/report";
-import type { ActionResponse, SceneMap as SceneMapT, SimulationApproval, SimulationProposal } from "@/lib/types";
+import type { ActionResponse, EventEnvelope, SceneMap as SceneMapT, SimulationApproval, SimulationProposal, SimulationState } from "@/lib/types";
 import { useAlerts } from "@/lib/useAlerts";
 import { useSimulation, type LinkStatus } from "@/lib/useSimulation";
 import { CameraView, cameraFeeds } from "./CamGrid";
@@ -19,7 +19,8 @@ import { FeedFrame, useFeedOrder, useSlotRects } from "./FeedStage";
 import { FEED_STATUS_LABEL, MAP_FEED_ID, type FeedStatus } from "@/lib/feeds";
 import { FloorPicker } from "./FloorPicker";
 import { ROUTING_FLOOR, floorAssignments, floorById, floorSummaries } from "@/lib/floors";
-import { buildingSceneMap, isBuildingMap, reopenUnderPeople } from "@/lib/buildingMap";
+import { isBuildingMap, peopleOnWalls, planBuildingWalls, planRestore, type RestorePlan, type WallsBackup, type WallsPlan } from "@/lib/buildingMap";
+import { WallsDialog, type WallsConfirm } from "./WallsDialog";
 import { CommandDock } from "./CommandDock";
 import { CommsPanel } from "./CommsPanel";
 import { LoopStrip } from "./LoopStrip";
@@ -70,10 +71,8 @@ export function CommandCenter() {
   const [help, setHelp] = useState(false);
   const [floorPlan, setFloorPlanState] = useState<FloorPlan>(null);
   const [floor, setFloor] = useState(ROUTING_FLOOR); // floor shown on the scene map
-  // Route around the routing floor's building walls (publishes them as the A* occupancy grid).
-  const [buildingWalls, setBuildingWallsState] = useState(true);
-  const replacedMap = useRef<SceneMapT | null>(null); // map we replaced, restored when walls are switched off
-  const wallsInFlight = useRef<string | null>(null);
+  // Building walls are published/removed only by an explicit, confirmed operator action.
+  const [wallsDialog, setWallsDialog] = useState<null | { mode: "loading" } | { mode: "on"; plan: WallsPlan } | { mode: "off"; restore: RestorePlan }>(null);
   const [operator, setOperator] = useState("demo-command");
 
   const proposal = state?.current_proposal_id ? state.proposals.find((p) => p.id === state.current_proposal_id) ?? null : null;
@@ -107,7 +106,6 @@ export function CommandCenter() {
     try {
       const saved = localStorage.getItem("aegis.operator");
       if (saved) setOperator(saved);
-      if (localStorage.getItem("aegis.buildingWalls") === "off") setBuildingWallsState(false);
       const fp = localStorage.getItem("aegis.floorplan");
       if (fp) setFloorPlanState(JSON.parse(fp));
     } catch {
@@ -152,52 +150,109 @@ export function CommandCenter() {
     [readOnly, run, toast],
   );
 
-  // Building walls → routing grid. Keeps the live map in sync: publishes the walls when the map is the
-  // seeded/other map (e.g. after Reset) and reopens a wall cell if someone is marked on a wall line.
+  // Building walls → routing grid. Opening the dashboard never changes the shared map: the operator
+  // opens a dialog (live state + shared history are fetched fresh), reviews, and confirms. Right
+  // before publishing, the live map revision is re-checked; if anyone changed it meanwhile, nothing
+  // is published.
   const liveMap = sim.state?.scenario.scene_map ?? null;
-  useEffect(() => {
-    if (readOnly || !buildingWalls || !sim.state || pending !== null || (link !== "live" && link !== "polling")) return;
-    const st = sim.state;
-    const next = isBuildingMap(liveMap) ? reopenUnderPeople(st, liveMap!) : buildingSceneMap(st, ROUTING_FLOOR);
-    if (!next || wallsInFlight.current === next.map.revision) return;
-    if (!isBuildingMap(liveMap) && liveMap) {
-      replacedMap.current = liveMap;
-      try {
-        localStorage.setItem("aegis.replacedMap", JSON.stringify(liveMap));
-      } catch {
-        /* ignore */
-      }
-    }
-    wallsInFlight.current = next.map.revision;
-    const who = next.opened.map((id) => responderName(st, id) || shortId(id)).join(", ");
-    void act("Building walls", () => api.updateMap(next.map)).then((r) => {
-      // A failed publish is not retried for the same revision (avoids an error loop); toggling walls retries.
-      if (!r) return;
-      if (!isBuildingMap(liveMap)) toast("info", `Routing now follows ${floorById(ROUTING_FLOOR).short} walls and doors${who ? ` (opened wall under ${who})` : ""}`);
-      else if (who) toast("info", `Opened the wall cell under ${who} so a route can reach them`);
-    });
-  }, [readOnly, buildingWalls, sim.state, liveMap, pending, link, act, toast]);
-
-  const setBuildingWalls = (on: boolean) => {
-    setBuildingWallsState(on);
-    wallsInFlight.current = null;
+  const wallsActive = isBuildingMap(liveMap);
+  const BACKUP_KEY = "aegis.wallsBackup";
+  const readBackup = (): WallsBackup | null => {
     try {
-      localStorage.setItem("aegis.buildingWalls", on ? "on" : "off");
+      return JSON.parse(localStorage.getItem(BACKUP_KEY) ?? "null") as WallsBackup | null;
     } catch {
-      /* ignore */
-    }
-    if (!on && isBuildingMap(liveMap)) {
-      let back = replacedMap.current;
-      try {
-        back ??= JSON.parse(localStorage.getItem("aegis.replacedMap") ?? "null") as SceneMapT | null;
-      } catch {
-        /* ignore */
-      }
-      if (back && back.frame_id !== liveMap?.frame_id) back = null;
-      if (back) void act("Restore map", () => api.updateMap(back)).then((r) => r && toast("info", "Routing back on the previous map"));
-      else toast("info", "Walls off — Reset restores the demo map");
+      return null;
     }
   };
+  const allEvents = async () => {
+    const out: EventEnvelope[] = [];
+    let after = 0;
+    for (let page = 0; page < 20; page++) {
+      const p = await api.events(after, 1000);
+      out.push(...p.events);
+      if (p.events.length < 1000) break;
+      after = p.events[p.events.length - 1].sequence;
+    }
+    return out;
+  };
+
+  const openWalls = async () => {
+    if (readOnly) return;
+    setWallsDialog({ mode: "loading" });
+    try {
+      const fresh = await api.state();
+      if (isBuildingMap(fresh.scenario.scene_map)) setWallsDialog({ mode: "off", restore: planRestore(fresh, await allEvents(), readBackup()) });
+      else {
+        const plan = planBuildingWalls(fresh, ROUTING_FLOOR);
+        if (!plan) throw new Error("No wall grid for the routing floor");
+        setWallsDialog({ mode: "on", plan });
+      }
+    } catch (e) {
+      setWallsDialog(null);
+      toast("error", `Couldn't check the live map: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  const confirmWalls = async (c: WallsConfirm) => {
+    const d = wallsDialog;
+    if (!d || d.mode === "loading") return;
+    let fresh: SimulationState;
+    try {
+      fresh = await api.state();
+    } catch (e) {
+      toast("error", `Couldn't re-check the live map: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
+    const liveRev = fresh.scenario.scene_map?.revision ?? null;
+    const expected = d.mode === "on" ? d.plan.baseRevision : d.restore.ok ? d.restore.liveRevision : null;
+    if (liveRev !== expected) {
+      setWallsDialog(null);
+      toast("error", `The map changed while this was open (${expected ?? "none"} → ${liveRev ?? "none"}). Nothing was published; open Walls again to review.`);
+      return;
+    }
+    setWallsDialog(null);
+    if (d.mode === "on") {
+      const { plan } = d;
+      if (plan.incompatible && !c.replace) return;
+      const r = await act("Building walls", () => api.updateMap(plan.map));
+      if (!r) return;
+      try {
+        if (fresh.scenario.scene_map)
+          localStorage.setItem(BACKUP_KEY, JSON.stringify({ map: fresh.scenario.scene_map, buildingRevision: plan.map.revision, epoch: fresh.epoch } satisfies WallsBackup));
+      } catch {
+        /* the shared event log is the primary restore source */
+      }
+      const moved: string[] = [];
+      for (const id of c.snap) {
+        const p = plan.onWalls.find((x) => x.id === id && x.kind === "responder" && x.snap);
+        if (!p?.snap) continue;
+        const m = await act("Position correction", () => api.moveResponder(id, p.snap!));
+        if (m) moved.push(responderName(fresh, id));
+      }
+      const stuck = plan.onWalls.filter((p) => !moved.includes(responderName(fresh, p.id))).length;
+      toast(
+        "info",
+        `Routing follows ${floorById(ROUTING_FLOOR).short} walls and doors${moved.length ? ` · moved ${moved.join(", ")} (demo correction)` : ""}${stuck ? ` · ${stuck} on a wall line without a route` : ""}`,
+      );
+    } else if (d.restore.ok) {
+      const { restore } = d;
+      if (restore.laterEdits.length && !c.discardEdits) return;
+      const r = await act("Restore map", () => api.updateMap(restore.map));
+      if (!r) return;
+      try {
+        localStorage.removeItem(BACKUP_KEY);
+      } catch {
+        /* ignore */
+      }
+      toast("info", `Walls off · restored map ${restore.map.revision} (${restore.source === "server-history" ? "shared history" : "browser backup"})`);
+    }
+  };
+
+  // People the planner cannot route to/from on the live grid (standing on a wall or blocked cell).
+  const noRouteIds = useMemo(() => {
+    const g = state?.scenario.scene_map?.occupancy_grid;
+    return state && g ? new Set(peopleOnWalls(state, g).map((p) => p.id)) : new Set<string>();
+  }, [state]);
 
   // Floors: which floor each person is on, and who is detected where (drives the floor picker).
   const floorOf = useMemo(() => floorAssignments(state, flags.multiFloor), [state, flags.multiFloor]);
@@ -386,14 +441,19 @@ export function CommandCenter() {
                 </Button>
                 <Button
                   size="sm"
-                  variant={buildingWalls && isBuildingMap(liveMap) ? "primary" : "ghost"}
-                  disabled={readOnly}
-                  aria-pressed={buildingWalls}
-                  onClick={() => setBuildingWalls(!buildingWalls)}
-                  title={`Route around ${floorById(ROUTING_FLOOR).short} building walls (doors only). Publishes the walls as the routing grid.`}
+                  variant={wallsActive ? "primary" : "ghost"}
+                  disabled={busy || wallsDialog !== null}
+                  aria-pressed={wallsActive}
+                  onClick={() => void openWalls()}
+                  title={
+                    wallsActive
+                      ? "Building walls are the routing map. Click to review restoring the previous map."
+                      : `Review routing around ${floorById(ROUTING_FLOOR).short} building walls (doors only). Changes the shared map only after you confirm.`
+                  }
                   data-testid="walls-toggle"
+                  data-walls={wallsActive ? "on" : "off"}
                 >
-                  {buildingWalls ? (isBuildingMap(liveMap) ? "Walls on" : "Walls…") : "Walls off"}
+                  {wallsActive ? "Walls on" : "Walls off"}
                 </Button>
                 <Button
                   size="sm"
@@ -431,6 +491,7 @@ export function CommandCenter() {
                 floorPlan={shownPlan}
                 flashing={flashing}
                 visibleIds={visibleIds}
+                noRouteIds={noRouteIds}
                 outline={floorDef.outline}
                 showRouting={onRoutingFloor}
                 floorLabel={`${floorDef.short} ${floorDef.name}`}
@@ -646,6 +707,16 @@ export function CommandCenter() {
       )}
 
       {help && <ShortcutHelp onClose={() => setHelp(false)} />}
+      {wallsDialog && (
+        <WallsDialog
+          {...wallsDialog}
+          floorLabel={floorById(ROUTING_FLOOR).short}
+          nameOf={(id) => (fighters.some((r) => r.id === id) ? responderName(state, id) : shortId(id))}
+          busy={pending !== null}
+          onCancel={() => setWallsDialog(null)}
+          onConfirm={(c) => void confirmWalls(c)}
+        />
+      )}
       <AlertStack alerts={alerts} onDismiss={dismiss} />
 
       <div className="pointer-events-none fixed bottom-3 left-1/2 z-50 flex w-[28rem] -translate-x-1/2 flex-col gap-2">

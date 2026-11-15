@@ -43,11 +43,13 @@ interface Props {
   showRouting?: boolean;
   /** Floor name shown in the map caption. */
   floorLabel?: string;
+  /** People the planner cannot route to/from (standing on a wall or blocked cell): labelled NO ROUTE. */
+  noRouteIds?: Set<string>;
   /** Simplified building outline drawn on the floor (cells over the map bounds, row 0 = north edge). */
   outline?: FloorOutline | null;
 }
 
-export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId, ghostRoutes = [], floorPlan, flashing, visibleIds, showRouting = true, floorLabel, outline }: Props) {
+export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onToggleCell, now, onPlace, focusResponderId, ghostRoutes = [], floorPlan, flashing, visibleIds, showRouting = true, floorLabel, outline, noRouteIds }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const scene = state.scenario;
   const grid = scene.scene_map?.occupancy_grid ?? null;
@@ -484,6 +486,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
               {meta.label.toUpperCase()}
               {stale ? " · STALE" : ""}
               {task ? ` · ${task.status.toUpperCase()}` : ""}
+              {showRouting && noRouteIds?.has(c.id) ? " · NO ROUTE (ON WALL)" : ""}
             </text>
           </g>
         );
@@ -555,6 +558,7 @@ export function SceneMap({ state, proposal, selectedId, onSelect, editMode, onTo
               {...HALO}
             >
               {shortId(r.id)} · {RESPONDER_SHORT[r.status]}
+              {showRouting && noRouteIds?.has(r.id) ? " · NO ROUTE (ON WALL)" : ""}
             </text>
           </g>
         );
