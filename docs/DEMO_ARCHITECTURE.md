@@ -49,10 +49,11 @@ about 50 ms and no loss with only the boards. So:
 | teammates' laptops (camera, dashboards) | campus WiFi + Tailscale | the host's Tailscale address, ports 8000 and 3000 |
 | host browser | localhost | `http://localhost:3000/command` |
 
-On the host, once per boot, from an Administrator PowerShell:
+On the host, once per boot, from an Administrator PowerShell
+(`hardware/scripts/apply-demo-network.ps1`):
 
 ```powershell
-.\hardware\scriptspply-demo-network.ps1
+.\hardware\scripts\apply-demo-network.ps1
 ```
 
 It sets the hotspot MTU to 1400 (some laptops never receive full 1500-byte
