@@ -208,6 +208,12 @@ void showIdle() {
     showText("--");  // not connected to the bridge
     return;
   }
+#if AEGIS_UNO_Q
+  // UNO Q: "AEGIS" keeps scrolling while linked and idle. When a pass ends,
+  // updateBanner() calls back here, which starts the next pass.
+  startBanner(false);
+  return;
+#endif
   matrix.beginDraw();
   matrix.clear();
   matrix.point(MATRIX_W - 1, 7);  // single "alive and linked" pixel
@@ -225,7 +231,11 @@ void startBanner(bool withStatus) {
     strcpy(bannerText, "AEGIS");
   }
   bannerActive = true;
+#if AEGIS_UNO_Q
+  bannerX = -4 * (int)strlen(bannerText);  // UNO Q scrolls left to right
+#else
   bannerX = MATRIX_W;
+#endif
   bannerStepAt = 0;
 }
 
@@ -234,7 +244,11 @@ void updateBanner() {
   if (state != IDLE) { bannerActive = false; return; }
   if (millis() - bannerStepAt < BANNER_STEP_MS) return;
   bannerStepAt = millis();
+#if AEGIS_UNO_Q
+  if (bannerX > MATRIX_W) {
+#else
   if (bannerX < -4 * (int)strlen(bannerText)) {
+#endif
     bannerActive = false;
     showIdle();
     return;
@@ -247,7 +261,11 @@ void updateBanner() {
   matrix.print(bannerText);
   matrix.endText();
   matrix.endDraw();
+#if AEGIS_UNO_Q
+  bannerX++;
+#else
   bannerX--;
+#endif
 }
 
 // ---------------------------------------------------------------- reports
