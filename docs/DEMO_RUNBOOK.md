@@ -4,6 +4,10 @@ How the four of us run the AEGIS demo on the hybrid network: both Arduinos on
 the host's hotspot, every laptop on campus WiFi + Tailscale. Architecture and
 ports: [DEMO_ARCHITECTURE.md](DEMO_ARCHITECTURE.md).
 
+![Animated walkthrough of one AEGIS dispatch: camera, backend, human approval, two responder devices, acknowledged and completed](assets/aegis-flow.svg)
+
+*Illustrative animation of the flow (24 s loop), not a recording of the real system.*
+
 Everything here is a simulation. A human approves and dispatches; the devices
 only show a task and report the responder's button presses.
 
