@@ -459,3 +459,8 @@ html {
     animation: none;
   }
 }
+
+/* Floor-plan drawings are black-on-white; invert them on the dark theme so they read as linework. */
+:root:not([data-theme="light"]) .floorplan-img {
+  filter: invert(0.9) hue-rotate(180deg);
+}

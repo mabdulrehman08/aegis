@@ -17,6 +17,8 @@ import { useSimulation, type LinkStatus } from "@/lib/useSimulation";
 import { CameraView, cameraFeeds } from "./CamGrid";
 import { FeedFrame, useFeedOrder, useSlotRects } from "./FeedStage";
 import { FEED_STATUS_LABEL, MAP_FEED_ID, type FeedStatus } from "@/lib/feeds";
+import { FloorPicker } from "./FloorPicker";
+import { ROUTING_FLOOR, floorAssignments, floorById, floorSummaries } from "@/lib/floors";
 import { CommandDock } from "./CommandDock";
 import { CommsPanel } from "./CommsPanel";
 import { LoopStrip } from "./LoopStrip";
@@ -66,6 +68,7 @@ export function CommandCenter() {
   }, [drawer]);
   const [help, setHelp] = useState(false);
   const [floorPlan, setFloorPlanState] = useState<FloorPlan>(null);
+  const [floor, setFloor] = useState(ROUTING_FLOOR); // floor shown on the scene map
   const [operator, setOperator] = useState("demo-command");
 
   const proposal = state?.current_proposal_id ? state.proposals.find((p) => p.id === state.current_proposal_id) ?? null : null;
@@ -143,8 +146,20 @@ export function CommandCenter() {
     [readOnly, run, toast],
   );
 
+  // Floors: which floor each person is on, and who is detected where (drives the floor picker).
+  const floorOf = useMemo(() => floorAssignments(state, flags.multiFloor), [state, flags.multiFloor]);
+  const floorStats = useMemo(() => floorSummaries(state, floorOf), [state, floorOf]);
+  const visibleIds = useMemo(() => new Set(Object.keys(floorOf).filter((id) => floorOf[id] === floor)), [floorOf, floor]);
+  const onRoutingFloor = floor === ROUTING_FLOOR;
+  const floorDef = floorById(floor);
+  // A plan uploaded in Settings is calibrated to the routing grid, so it replaces the built-in L1 drawing only.
+  const shownPlan =
+    onRoutingFloor && floorPlan ? floorPlan : floorDef.plan ? { url: floorDef.plan, opacity: 0.55, fit: "contain" as const } : null;
+
   const select = (id: string | null) => {
     setSelected(id);
+    // Selecting someone (victim strip, camera, map) shows the floor they're on.
+    if (id && floorOf[id] && floorOf[id] !== floor) setFloor(floorOf[id]);
     if (id && fighters.some((r) => r.id === id)) setFighterId(id);
   };
 
@@ -199,9 +214,21 @@ export function CommandCenter() {
   const [camStatus, setCamStatus] = useState<Record<string, FeedStatus>>({});
   const onCamStatus = useCallback((id: string, s: FeedStatus) => setCamStatus((p) => (p[id] === s ? p : { ...p, [id]: s })), []);
   // Map tools need the map on screen: bring it back to the primary viewport when they're switched on.
+  // They also only apply to the floor the routing grid describes.
   useEffect(() => {
     if ((placing || editMap) && primaryId !== MAP_FEED_ID) swapFeed(MAP_FEED_ID);
-  }, [placing, editMap, primaryId, swapFeed]);
+    if ((placing || editMap) && floor !== ROUTING_FLOOR) setFloor(ROUTING_FLOOR);
+  }, [placing, editMap, primaryId, swapFeed, floor]);
+
+  /** Floor picker: show that floor on the main panel (bringing the map to the primary viewport). */
+  const showFloor = (id: string) => {
+    setFloor(id);
+    if (id !== ROUTING_FLOOR) {
+      setPlacing(false);
+      setEditMap(false);
+    }
+    if (primaryId !== MAP_FEED_ID) swapFeed(MAP_FEED_ID);
+  };
 
   // Keyboard shortcuts (ignored while typing). Space is handled by push-to-talk.
   useEffect(() => {
@@ -279,6 +306,10 @@ export function CommandCenter() {
           <section className="panel relative flex h-full min-h-0 flex-col" aria-label="Scene map">
             <div className="flex items-center gap-2 border-b border-line px-2.5 py-1">
               <h2 className="label !text-text">Scene map</h2>
+              <span className="mono shrink-0 rounded-[2px] border border-line-strong px-1 text-[9.5px] font-semibold text-text" data-map-floor={floor}>
+                {floorDef.short}
+                {primary ? ` · ${floorDef.name}` : ""}
+              </span>
               <span className="mono shrink-0 text-[9.5px] font-semibold tracking-[0.12em]" style={{ color: mapStatus.color }} data-feed-status={mapStatus.status}>
                 {mapStatus.label}
               </span>
@@ -293,11 +324,11 @@ export function CommandCenter() {
                   size="sm"
                   variant={placing ? "warn" : "ghost"}
                   disabled={busy || !activeFighter}
+                  title={onRoutingFloor ? "Shortcut: M" : `Positions are on the ${floorById(ROUTING_FLOOR).short} routing grid — switches floor`}
                   onClick={() => {
                     setPlacing((v) => !v);
                     setEditMap(false);
                   }}
-                  title="Shortcut: M"
                 >
                   {placing ? "Click map…" : `Mark ${responderName(state, activeFighter ?? "")}`}
                 </Button>
@@ -334,10 +365,16 @@ export function CommandCenter() {
                 onPlace={placing ? place : null}
                 focusResponderId={activeFighter}
                 ghostRoutes={diff?.ghostRoutes}
-                floorPlan={floorPlan}
+                floorPlan={shownPlan}
                 flashing={flashing}
+                visibleIds={visibleIds}
+                showRouting={onRoutingFloor}
+                floorLabel={`${floorDef.short} ${floorDef.name}`}
               />
             </div>
+            {primary && !onRoutingFloor && floorStats[floor].victims + floorStats[floor].detections + floorStats[floor].responders === 0 && (
+              <p className="mono pointer-events-none absolute inset-x-0 top-1/2 text-center text-[11px] text-muted">No one detected on {floorDef.short}.</p>
+            )}
             {primary && <MapLegend ghost={!!diff?.ghostRoutes.length} invalidated={invalidatedRoutes.length > 0} />}
           </section>
   );
@@ -415,7 +452,7 @@ export function CommandCenter() {
       {(fallback || previewOn) && (
         <div className="sim-stripe flex items-center gap-3 rounded border border-warn/50 px-3 py-0.5 text-[11px] text-warn">
           {fallback && <b>FALLBACK — seeded scenario, not live. Actions disabled.</b>}
-          {previewOn && <span>PREVIEW DATA ON — {[flags.sensorVitals && "sensor heart rate", flags.deviceStatus && "device status"].filter(Boolean).join(", ")} are mock values.</span>}
+          {previewOn && <span>PREVIEW DATA ON — {[flags.sensorVitals && "sensor heart rate", flags.deviceStatus && "device status", flags.multiFloor && "floor assignments"].filter(Boolean).join(", ")} are mock values.</span>}
           {fallback && (
             <button onClick={() => setFallback(false)} className="ml-auto underline">
               return to live
@@ -482,6 +519,13 @@ export function CommandCenter() {
           onOpenDetails={() => setDrawer(true)}
           neuralSummary={neuralBadge}
         />
+
+        {/* Floor picker pinned to the primary viewport's top-left, whichever feed is there. */}
+        {rects[0] && (
+          <div className="absolute z-30" style={{ left: rects[0].x + 8, top: rects[0].y + (primaryId === MAP_FEED_ID && (editMap || placing) ? 52 : 30) }}>
+            <FloorPicker floor={floor} summaries={floorStats} preview={flags.multiFloor} onSelect={showFloor} />
+          </div>
+        )}
 
         {/* Feed layer: every feed stays mounted in a fixed DOM order; a swap only moves it over another slot. */}
         {feedIds.map((id) => {

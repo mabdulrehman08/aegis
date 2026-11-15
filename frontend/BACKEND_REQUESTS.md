@@ -98,6 +98,18 @@ it does not proxy video.
 An MJPEG endpoint from the perception process with YOLO boxes and track IDs drawn, e.g.
 `http://127.0.0.1:5000/stream.mjpg`. Paste it into the building camera tile's source today.
 
+## 7. Building floor per position  *(priority: medium — multi-floor building map)*
+
+**Why:** the Command Center now has building floor plans (L1 ground, L3) and a floor picker that
+shows how many people are detected on each floor. The contract has no floor: every `Position`
+shares the scenario `frame_id`, and the occupancy grid / A* routes describe one floor. Today the UI
+puts everyone on L1 (the routing floor); a PREVIEW flag spreads people over floors with mock data
+(`src/lib/floors.ts`).
+
+**Ask:** an optional `floor_id` on `Position` (e.g. `"L1"`, `"L3"`), set from the camera/zone that
+produced the observation or from the responder's reported position, plus a `floor_id` on
+`OccupancyGrid` so routing knows which floor it covers (cross-floor routing can come later).
+
 ---
 
 ### Already integrated (no request needed)
