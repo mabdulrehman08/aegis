@@ -339,18 +339,19 @@ switches to the debug view with FPS, track states and publisher counters):
   that color (never amber or cyan), so it is clear which card is whose. Top
   line: number (same as the dashboard), posture, and how long they have been
   still.
-- **Four gauges in fixed places**, each with a fixed icon and label and one
-  short value: **breathing** (`16 /min`, or `NO MOTION` when no chest motion
-  is seen), **eyes** (`OPEN` / `CLOSED`), **response** to a spoken command
-  (`YES` / `NO`, `NOT ASKED` before the first command), **blood** (`NOT SEEN`
-  or the region, `HEAD +1`; the region is also outlined in amber on the body).
+- **Round gauges**, each with a fixed icon and label and one short value:
+  **eyes** (`OPEN` / `CLOSED`), **response** to a spoken command (`YES` /
+  `NO`, `NOT ASKED` before the first command), **blood** (`NOT SEEN` or the
+  region, `HEAD +1`; the region is also outlined in amber on the body).
+  **Breathing** (`16 /min`) and **pulse** (`72 /min`) only appear once the
+  camera has a rate; there is never a dash for them, and no "no chest
+  motion" (it is not evidence of no breathing, see the breathing results). While either is being measured one grey line says
+  "Measuring breathing and pulse, keep still".
 - **The ring is the state:** white = observed; amber = notable observation
   (no chest motion, eyes closed, no response, blood seen); dashed grey = the
   camera cannot tell (a dash) or nothing was asked yet; cyan = in progress
-  (the breathing ring fills while it measures, the response ring drains while
-  it watches after a command). A trailing `?` marks a low confidence. When
-  breathing cannot be measured, one grey line says why ("Hold the camera
-  still to measure breathing", "Chest not visible").
+  (the response ring drains while it watches after a command). A trailing
+  `?` marks a low confidence.
 - **What happened, under the gauges:** up to two short notes from the history
   observations below, most important first: "Fall seen 1:20 ago", "Face down
   for 0:12", "Waving now", "Blood area growing, +45% in 30 s", "Eyes closed
@@ -538,6 +539,15 @@ number. Any change to the breathing method must improve the paced takes
 (known pace) without adding rates on the background patch, the breath-hold
 windows or these clips.
 
+Rechecked Nov 14 evening, every second of every clip:
+- `no_motion_detected` is not evidence of held breath. On the outdoor clips
+  it came in 41-75% of breathing windows at 4-13 m and 25-62% of held ones.
+  So the card and the backend only get breathing as a rate.
+- A lower SNR threshold finds more breathing (lying indoors: 3% of windows
+  at 40, 15% at 20) and gave no rate in the 50 held-breath windows, but the
+  background patch beside the person also passed at 20 in 7% of windows (21%
+  for the chest; 2 clips had room for a patch). The threshold stays at 40.
+
 **Soak test.** For a long run with memory tracking, use a zones config so
 reports are actually sent. The summary includes peak memory every 10 minutes;
 a peak that keeps rising hours in means a leak.
@@ -672,7 +682,7 @@ are not accuracy figures. Mapping error comes from the staged scenario runs.
 python -m pytest cv/tests
 ```
 
-207 tests. The suite covers:
+208 tests. The suite covers:
 
 - Homography math: exact recovery, reprojection error, horizon, degenerate
   points, rescaling.
