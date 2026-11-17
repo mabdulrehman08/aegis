@@ -1,5 +1,7 @@
 # AEGIS
 
+Built at **HackPrinceton Fall 2026** (Princeton University, November 13-15, 2026).
+
 HackPrinceton 2026 prototype for human-supervised emergency response coordination.
 The backend MVP runs a complete synthetic coordination loop, **not a clinical or
 production emergency-response system**. All included people and coordinates are synthetic.
